@@ -1,0 +1,14 @@
+# Kredensial lokal, jangan di-commit
+config/config.php
+koneksi/kredensial.php
+
+# Gambar produk hasil unggahan (folder tetap ada lewat .gitkeep)
+public/uploads/*
+!public/uploads/.gitkeep
+
+# File editor dan sistem
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
