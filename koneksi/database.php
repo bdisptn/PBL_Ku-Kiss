@@ -3,9 +3,18 @@
 // Cara pakai di halaman lain: $pdo = db();
 // Data login diambil dari koneksi/kredensial.php (salinan dari kredensial.example.php).
 
+final class BackendConfigurationException extends RuntimeException
+{
+}
+
+final class DatabaseConnectionException extends RuntimeException
+{
+}
+
 if (!file_exists(__DIR__ . '/kredensial.php')) {
-    http_response_code(500);
-    exit('File koneksi/kredensial.php belum dibuat. Salin koneksi/kredensial.example.php menjadi koneksi/kredensial.php, lalu isi data PostgreSQL.');
+    throw new BackendConfigurationException(
+        'File koneksi/kredensial.php belum dibuat. Salin koneksi/kredensial.example.php dan isi kredensial PostgreSQL.'
+    );
 }
 require_once __DIR__ . '/kredensial.php';
 
@@ -22,10 +31,8 @@ function db(): PDO
                 PDO::ATTR_EMULATE_PREPARES   => false,
             ]);
         } catch (PDOException $e) {
-            // Detail error hanya masuk log server, tidak ditampilkan ke pengunjung.
             error_log('Koneksi database gagal: ' . $e->getMessage());
-            http_response_code(500);
-            exit('Koneksi gagal: ' . htmlspecialchars($e->getMessage()));
+            throw new DatabaseConnectionException('Tidak dapat terhubung ke database.', 0, $e);
         }
     }
 

@@ -5,6 +5,11 @@ koneksi/kredensial.php
 # Gambar produk hasil unggahan (folder tetap ada lewat .gitkeep)
 public/uploads/*
 !public/uploads/.gitkeep
+!public/uploads/.htaccess
+!public/uploads/products/
+!public/uploads/products/.gitkeep
+!public/uploads/bukti-pembayaran/
+!public/uploads/bukti-pembayaran/.gitkeep
 
 # File editor dan sistem
 .vscode/
