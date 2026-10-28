@@ -1,0 +1,525 @@
+/* =========================================================
+   KU-KISS — Gaya utama website
+   Warna utama dan font yang digunakan di seluruh halaman.
+   ========================================================= */
+:root {
+  --maroon: #6b2a2c;
+  --cream: #fdf9f4;
+  --soft-pink: #ffc9c9;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Poppins', sans-serif;
+  background: var(--cream);
+  color: #292929;
+}
+
+.text-maroon {
+  color: var(--maroon);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--maroon);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.logo {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+/* Kartu, tombol, dan efek hover */
+.box3d {
+  background: #fff;
+  border: 0;
+  border-radius: 14px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.16),
+              0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.hov {
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.hov:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+}
+
+.nav-3d {
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.18);
+}
+
+.nav-link {
+  color: #333;
+  font-size: 15px;
+}
+
+.avatar {
+  color: #c4c4c4;
+  font-size: 2rem;
+}
+
+.btn-maroon {
+  color: #fff;
+  background: var(--maroon);
+  border: 0;
+  border-radius: 8px;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.25);
+}
+
+.btn-maroon:hover {
+  color: #fff;
+  background: #561f21;
+}
+
+.btn-masuk {
+  color: #fff;
+  background: #1e90ff;
+  font-size: 13px;
+}
+
+.btn-keluar {
+  color: #fff;
+  background: #ff5a5a;
+  border-radius: 20px;
+  font-size: 13px;
+}
+
+/* Pencarian dan area katalog produk */
+.search {
+  position: relative;
+  max-width: 480px;
+}
+
+.search i {
+  position: absolute;
+  top: 8px;
+  left: 12px;
+}
+
+.search input {
+  width: 100%;
+  padding: 6px 12px 6px 38px;
+  background: #fff;
+  border: 1px solid #aaa;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+.hero-img {
+  width: 190px;
+  height: 190px;
+  object-fit: contain;
+}
+
+.pop {
+  width: 78px;
+  height: 78px;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.25);
+}
+
+.pill {
+  width: fit-content;
+  padding: 6px 80px;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.cat {
+  min-width: 230px;
+  padding: 24px 12px;
+  text-align: center;
+}
+
+.cat img {
+  width: 150px;
+  height: 130px;
+  object-fit: contain;
+}
+
+.ri {
+  overflow: hidden;
+}
+
+.ri-img {
+  width: 230px;
+  height: 150px;
+  object-fit: cover;
+}
+
+.round-btn {
+  width: 40px;
+  height: 40px;
+  color: #fff;
+  background: var(--maroon);
+  border: 0;
+  border-radius: 50%;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
+}
+
+.stepper {
+  display: flex;
+  justify-content: space-between;
+  gap: 22px;
+  margin-top: 6px;
+  padding: 2px 10px;
+  color: #fff;
+  background: var(--maroon);
+  border-radius: 6px;
+}
+
+.stepper i {
+  cursor: pointer;
+}
+
+.sec {
+  margin-bottom: 18px;
+  padding: 14px;
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.chip {
+  padding: 5px 10px;
+  background: #fff;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.chip-m {
+  padding: 5px 10px;
+  color: #fff;
+  background: var(--maroon);
+  border-radius: 6px;
+  font-size: 14px;
+  text-align: right;
+}
+
+.opt {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  padding: 14px;
+  background: #fff;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.opt.on,
+.tab.on {
+  color: #fff;
+  background: var(--maroon);
+}
+
+.tab {
+  padding: 4px 36px;
+  background: #fff;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+footer {
+  margin-top: 2.5rem;
+  background: #fff;
+  border-top: 2px solid #ddd;
+}
+
+/* =========================================================
+   Area admin: sidebar, header, tabel, dashboard, laporan
+   ========================================================= */
+.side {
+  display: flex;
+  flex: 0 0 215px;
+  flex-direction: column;
+  min-height: 100vh;
+  background: #fff;
+  box-shadow: 2px 0 6px rgba(0, 0, 0, 0.12);
+}
+
+.side-brand {
+  padding: 28px 20px;
+  color: var(--maroon);
+  font-weight: 500;
+}
+
+.side a {
+  display: block;
+  padding: 10px 24px;
+  color: #222;
+  text-decoration: none;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.side a.on,
+.side .out {
+  color: #fff;
+  background: var(--maroon);
+}
+
+.side .out {
+  margin-top: auto;
+  text-align: center;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.tbl {
+  font-size: 13px;
+}
+
+.tbl thead th,
+.report-total {
+  color: #fff;
+  background: var(--maroon);
+  font-weight: 500;
+}
+
+.pg span,
+.pg b {
+  padding: 2px 8px;
+  border: 1px solid #aaa;
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.pg b {
+  color: #fff;
+  background: var(--maroon);
+}
+
+.stat {
+  padding: 16px 22px;
+  border-top: 6px solid;
+}
+
+.stat b {
+  display: block;
+  margin-top: 6px;
+  font-size: 26px;
+}
+
+.restock {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  padding: 6px 10px;
+  background: var(--soft-pink);
+  border-radius: 8px;
+  font-size: 11px;
+}
+
+.restock span {
+  padding: 3px 12px;
+  color: #d33;
+  background: #fff;
+  border-radius: 4px;
+}
+
+#flash {
+  position: fixed;
+  z-index: 2000;
+  bottom: 20px;
+  left: 50%;
+  padding: 0.5rem 1.2rem;
+  color: #fff;
+  background: var(--maroon);
+  border-radius: 30px;
+  transform: translateX(-50%);
+}
+
+/* =========================================================
+   Profil pelanggan
+   ========================================================= */
+.profile-card {
+  max-width: 1000px;
+  margin: 0 auto;
+  overflow: hidden;
+}
+
+.profile-heading {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 20px 28px;
+  color: #fff;
+  background: var(--maroon);
+}
+
+.profile-heading h4 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.profile-avatar {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border: 2px solid #fff;
+  border-radius: 50%;
+}
+
+.profile-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 190px;
+  gap: 28px;
+  padding: 28px;
+}
+
+.profile-fields {
+  display: grid;
+  gap: 16px;
+}
+
+.profile-fields label {
+  display: grid;
+  gap: 6px;
+  color: #555;
+  font-size: 14px;
+}
+
+.profile-photo {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.profile-photo img {
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 1px solid #ddd;
+}
+
+@media (max-width: 768px) {
+  .side {
+    flex-basis: 150px;
+  }
+
+  .side-brand {
+    padding: 20px 12px;
+    font-size: 14px;
+  }
+
+  .side a {
+    padding: 10px 12px;
+    font-size: 12px;
+  }
+
+  .topbar {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .topbar .search {
+    width: 55% !important;
+  }
+
+  .topbar > span {
+    font-size: 11px;
+  }
+
+  .profile-body {
+    grid-template-columns: 1fr;
+    padding: 20px;
+  }
+
+  .profile-photo {
+    grid-row: 1;
+  }
+
+  .pill {
+    max-width: 100%;
+    padding-right: 36px;
+    padding-left: 36px;
+  }
+
+  .ri-img {
+    width: 120px;
+    height: 120px;
+  }
+}
+
+@media (max-width: 480px) {
+  .side {
+    flex-basis: 115px;
+  }
+
+  .side-brand {
+    padding: 16px 8px;
+    font-size: 12px;
+  }
+
+  .side a {
+    padding: 10px 8px;
+    font-size: 11px;
+  }
+
+  .side a i {
+    display: none;
+  }
+
+  .hero-img {
+    width: 110px;
+    height: 110px;
+  }
+
+  .profile-heading {
+    padding: 16px;
+  }
+
+  .profile-heading h4 {
+    font-size: 1rem;
+  }
+}
+
+/* Saat laporan dicetak, sembunyikan tombol navigasi dan aksi. */
+@media print {
+  body {
+    background: #fff;
+  }
+
+  .side,
+  .topbar,
+  .btn,
+  .pg,
+  footer,
+  nav {
+    display: none !important;
+  }
+
+  .box3d {
+    box-shadow: none;
+  }
+}
