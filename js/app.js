@@ -3,28 +3,47 @@
 // Data demo disimpan di localStorage. Nanti bagian ini bisa diganti API backend.
 // ============================================================
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+const toggleAuthPassword = (id, button) => { const input = document.getElementById(id); if (!input) return; input.type = input.type === 'password' ? 'text' : 'password'; button.innerHTML = input.type === 'password' ? '<i class="bi bi-eye"></i>' : '<i class="bi bi-eye-slash"></i>'; button.setAttribute('aria-label', input.type === 'password' ? 'Tampilkan password' : 'Sembunyikan password'); };
 const rp = n => 'Rp ' + Number(n).toLocaleString('id-ID') + ',00';
 const load = (k, d) => JSON.parse(localStorage.getItem(k) || 'null') || d, save = (k, v) => localStorage.setItem(k, JSON.stringify(v));
 const L = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusod tempor incididunt ut labore et dolore magna aliqua. Quis ipsu msuspendisse';
-const flash = m => { const d = document.createElement('div'); d.id = 'flash'; d.textContent = m; document.body.append(d); setTimeout(() => d.remove(), 1600); };
+const flash = m => {
+  const old = document.querySelector('#flash');
+  if (old) old.remove();
+  const d = document.createElement('div');
+  d.id = 'flash';
+  d.innerHTML = `<span>${m}</span><button type="button" aria-label="Tutup notifikasi" onclick="this.parentElement.remove()">&times;</button>`;
+  document.body.append(d);
+  setTimeout(() => d.remove(), 2800);
+};
 const BULAN = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 const YM = new Date().toISOString().slice(0, 7);
 
 let products = load('products', [
   { id: 1, kode: 'COO:MAT-001', nama: 'Cookies Varian Matcha', desc: L, harga: 15000, kat: 'Cookies', stok: 50, img: 'matcha.png' },
-  { id: 2, kode: 'COO:BIS-001', nama: 'Cookies Varian Biscoff', desc: L, harga: 15000, kat: 'Cookies', stok: 2, img: 'biscoff.png' },
+  { id: 2, kode: 'COO:ORI-001', nama: 'Cookies Varian Original', desc: L, harga: 15000, kat: 'Cookies', stok: 2, img: 'biscoff.png' },
   { id: 3, kode: 'COO:RED-001', nama: 'Cookies Varian Red Velvet', desc: L, harga: 15000, kat: 'Cookies', stok: 4, img: 'redvelvet.png' },
-  { id: 4, kode: 'COO:PIS-001', nama: 'Cookies Varian Pistachio', desc: L, harga: 15000, kat: 'Cookies', stok: 3, img: 'pistachio.png' },
-  { id: 5, kode: 'COO:ORE-001', nama: 'Cookies Varian Oreo', desc: L, harga: 15000, kat: 'Cookies', stok: 100, img: 'oreo.jpg' }]);
+  { id: 4, kode: 'COO:DBC-001', nama: 'Cookies Varian Double Choco', desc: L, harga: 15000, kat: 'Cookies', stok: 3, img: 'pistachio.png' },
+  { id: 5, kode: 'COO:MON-001', nama: 'Cookies Varian Cookie Monster', desc: L, harga: 15000, kat: 'Cookies', stok: 100, img: 'cookie-monster.png' }]);
 // Menyesuaikan data produk demo yang mungkin sudah tersimpan di localStorage.
 products = products.map(p => {
   if (p.id === 1) p.img = 'matcha.png';
   if (p.id === 2) {
-    p.nama = 'Cookies Varian Biscoff';
+    p.kode = 'COO:ORI-001';
+    p.nama = 'Cookies Varian Original';
     p.img = 'biscoff.png';
   }
   if (p.id === 3) p.img = 'redvelvet.png';
-  if (p.id === 4) p.img = 'pistachio.png';
+  if (p.id === 4) {
+    p.kode = 'COO:DBC-001';
+    p.nama = 'Cookies Varian Double Choco';
+    p.img = 'pistachio.png';
+  }
+  if (p.id === 5) {
+    p.kode = 'COO:MON-001';
+    p.nama = 'Cookies Varian Cookie Monster';
+    p.img = 'cookie-monster.png';
+  }
   return p;
 });
 save('products', products);
@@ -61,13 +80,13 @@ const list = (ps, btn) => ps.map(p => `<div class="box3d ri hov d-flex align-ite
 // ============================================================
 const P = {
   home: () => searchBox('Cari Disini') + `<div class="row g-4 mb-4"><div class="col-lg-7"><div class="box3d h-100 d-flex align-items-center gap-4 p-4"><img src="img/matcha.jpg" class="hero-img"><div><h5>Best Cookies Varian Matcha</h5><p class="text-muted small">${L}</p><button class="btn btn-maroon w-100" onclick="go(1)">Beli Sekarang</button></div></div></div>
-    <div class="col-lg-5"><div class="box3d h-100 p-4 text-center"><h5 class="mb-3">Cookies Terpopuler</h5><div class="d-flex justify-content-around">${[3, 4, 5].map(i => `<div class="small hov" onclick="go(${i})"><img class="pop mb-2" src="img/${prod(i).img}"><br>${prod(i).nama.replace('Varian ', 'Varian<br>')}</div>`).join('')}</div></div></div></div>
-    <div class="pill mx-auto my-4">Catalog Menu</div><div class="d-flex gap-4 overflow-auto p-3">${products.map(p => `<div class="box3d cat hov"><img src="img/${p.img}"><h6 class="my-3">${p.nama}</h6><button class="btn btn-maroon btn-sm w-100" onclick="go(${p.id})">Beli Sekarang</button></div>`).join('')}</div>
+    <div class="col-lg-5"><div class="box3d h-100 p-4 text-center"><h5 class="mb-3">Cookies Terpopuler</h5><div class="popular-list">${[3, 4, 5].map(i => `<button type="button" class="popular-card hov" onclick="go(${i})" aria-label="Lihat ${prod(i).nama}"><img class="pop mb-2" src="img/${prod(i).img}" alt="${prod(i).nama}"><span class="popular-name">${prod(i).nama}</span></button>`).join('')}</div></div></div></div>
+    <div class="pill mx-auto my-4">Catalog Menu</div><div class="d-flex gap-4 overflow-auto p-3 catalog-row">${products.map(p => `<div class="box3d cat hov"><img src="img/${p.img}" alt="${p.nama}"><h6 class="my-3 cat-name">${p.nama}</h6><button class="btn btn-maroon btn-sm w-100" onclick="go(${p.id})">Beli Sekarang</button></div>`).join('')}</div>
     <div id="about" class="row g-4 mt-3"><div class="col-lg-8"><div class="box3d h-100 p-4"><h6>ABOUT US</h6><p class="text-muted small">${(L + ' ').repeat(5)}</p></div></div><div class="col-lg-4"><div class="box3d h-100 p-4 text-center"><img src="img/matcha.jpg" style="width:200px"></div></div></div>`,
 
   menu: () => searchBox('Cari Menu', 'ms-auto') + (list(products.filter(p => p.nama.toLowerCase().includes(q.toLowerCase()))) || '<p>Tidak ditemukan.</p>'),
 
-  produk: id => { const p = prod(id); if (!p) return P.menu(); return `<div class="box3d ri d-flex flex-wrap mb-4"><img src="img/${p.img}" style="width:340px;max-width:100%;object-fit:cover"><div class="p-4 flex-grow-1" style="min-width:260px"><h4>${p.nama}</h4><p class="text-muted">${p.desc}</p><div class="fs-5 mb-3">${rp(p.harga)}</div>
+  produk: id => { const p = prod(id); if (!p) return P.menu(); return `<div class="box3d ri product-detail d-flex flex-wrap mb-4"><div class="product-detail-image"><img src="img/${p.img}" alt="${p.nama}"></div><div class="p-4 flex-grow-1 product-detail-info" style="min-width:260px"><h4>${p.nama}</h4><p class="text-muted">${p.desc}</p><div class="fs-5 mb-3">${rp(p.harga)}</div>
     <div class="d-flex gap-3"><button class="round-btn" onclick="add(${p.id})"><i class="bi bi-cart-fill"></i></button><button class="btn btn-maroon flex-grow-1" onclick="add(${p.id},1)">Beli Sekarang</button></div></div></div>` + list(products.filter(x => x.id != id), 1); },
 
   keranjang: () => !cart.length ? `<div class="box3d p-5 text-center"><h5 class="text-maroon">Keranjang masih kosong</h5><a href="#/menu" class="btn btn-maroon mt-2">Lihat Menu</a></div>` :
@@ -80,18 +99,56 @@ const P = {
     <div class="sec"><div class="d-flex justify-content-between mb-2"><span class="chip w-50">Total Pembayaran</span><span class="chip-m w-25">${rp(sub())}</span></div><div class="d-flex justify-content-between"><span class="chip w-50">Total Ongkos Kirim</span><span class="chip-m w-25">${rp(ongkir)}</span></div></div>
     <div class="sec"><div class="d-flex justify-content-center gap-3 mb-2">${['Pengantaran', 'Pick Up'].map(t => `<span class="tab ${t == mode ? 'on' : ''}" onclick="mode='${t}';render()">${t}</span>`).join('')}</div>
     ${mode == 'Pengantaran' ? `<div class="opt ${ship == 5000 ? 'on' : ''}" onclick="ship=5000;render()"><span>Standard</span><span>Rp 5.000,00</span></div><div class="opt ${ship == 3000 ? 'on' : ''}" onclick="ship=3000;render()"><span>Hemat</span><span>Rp 3.000,00</span></div><input id="alamat" class="form-control mt-2" placeholder="Alamat pengantaran">` : '<small class="text-muted">Ambil sendiri di lokasi KU-KISS sesuai jadwal PO.</small>'}</div>
-    <div class="sec"><div class="d-flex justify-content-between mb-2"><span class="chip w-50">Detail Pembayaran</span><button class="btn btn-maroon btn-sm" onclick="modal('Kode QRIS','<div class=&quot;text-center p-4 border border-2 rounded&quot;>QRIS KU-KISS<br><small class=&quot;text-muted&quot;>(gambar QRIS asli menyusul)</small></div>')"><i class="bi bi-eye"></i> Lihat Kode Qris Disini</button></div><div class="d-flex align-items-center gap-2"><i class="bi bi-qr-code fs-4 text-maroon"></i><span class="chip px-5">Qris</span></div></div>
+    <div class="sec"><div class="d-flex justify-content-between align-items-center gap-2 mb-2"><span class="chip">Detail Pembayaran</span><button type="button" class="btn btn-maroon btn-sm" onclick="showQris()"><i class="bi bi-eye"></i> Lihat Kode QRIS Disini</button></div><div class="d-flex align-items-center gap-2"><i class="bi bi-qr-code fs-4 text-maroon"></i><span class="chip px-5">QRIS</span></div></div>
     <div class="sec"><span class="chip">Upload Bukti Pembayaran</span><input type="file" id="bk" class="d-none" accept="image/*" onchange="bukti=true;$('#bkl').textContent=this.files[0].name"><button class="btn btn-maroon w-100 mt-2" onclick="$('#bk').click()"><i class="bi bi-upload"></i> <span id="bkl">Upload Disini</span></button></div>
     <div class="d-flex justify-content-between my-3"><span>Total Harga</span><span>${rp(sub() + ongkir)}</span></div><button class="btn btn-maroon w-100 py-2" onclick="order()">Pesan</button></div>`; },
 
-  login: () => `<div class="box3d mx-auto p-5" style="max-width:900px"><h2 class="text-center fw-semibold mb-4">Masuk</h2><form onsubmit="doLogin(event)" class="mx-auto" style="max-width:600px"><label class="fw-medium">Email</label><input id="em" type="email" class="form-control mb-3" placeholder="Masukkan Email" required>
-    <label class="fw-medium">Password</label><div class="input-group mb-1"><input id="pw" type="password" class="form-control" placeholder="Masukkan Password" required><button type="button" class="btn btn-outline-secondary" onclick="$('#pw').type=$('#pw').type=='password'?'text':'password'"><i class="bi bi-eye"></i></button></div>
-    <div class="text-end mb-3"><a href="#" class="text-maroon small text-decoration-none">Lupa Password ?</a></div><button class="btn btn-maroon w-100 py-2">Login</button>
-    <p class="text-center small mt-3">Belum punya akun? <a href="#/daftar" class="text-maroon text-decoration-none">Daftar</a></p><p class="text-center text-muted small">Demo: email berisi "admin" masuk sebagai admin.</p></form></div>`,
+  login: () => `<section class="auth-card box3d">
+    <div class="auth-brand">
+      <img src="img/logo.png" alt="Logo cookies KU-KISS" class="auth-illustration">
+      <h2>KU-KISS</h2>
+    </div>
+    <div class="auth-form-wrap">
+      <h1 class="auth-title">Masuk</h1>
+      <form onsubmit="doLogin(event)" class="auth-form">
+        <label for="em" class="fw-medium">Email</label>
+        <input id="em" type="email" class="form-control auth-input" placeholder="Masukkan Email" autocomplete="email" required>
+        <label for="pw" class="fw-medium mt-3">Password</label>
+        <div class="input-group auth-password">
+          <input id="pw" type="password" class="form-control auth-input" placeholder="Masukkan Password" autocomplete="current-password" required>
+          <button type="button" class="btn auth-eye" aria-label="Tampilkan password" onclick="toggleAuthPassword('pw', this)"><i class="bi bi-eye"></i></button>
+        </div>
+        <div class="text-end auth-forgot"><a href="#" class="text-maroon text-decoration-none">Lupa Password ?</a></div>
+        <button class="btn btn-maroon auth-submit" type="submit">Login</button>
+        <p class="text-center auth-switch">Belum punya akun? <a href="#/daftar" class="text-maroon text-decoration-none">Daftar</a></p>
+      </form>
+    </div>
+  </section>`,
 
-  daftar: () => `<div class="box3d mx-auto p-5" style="max-width:900px"><h2 class="text-center fw-semibold mb-4">Daftar</h2><form onsubmit="event.preventDefault();flash('Akun dibuat (demo)');location.hash='#/login'" class="mx-auto" style="max-width:600px">
-    ${[['Nama Lengkap', 'text'], ['Email', 'email'], ['Password', 'password']].map(([l, t]) => `<label class="fw-medium">${l}</label><input type="${t}" class="form-control mb-3" placeholder="Masukkan ${l}" required>`).join('')}
-    <button class="btn btn-maroon w-100 py-2">Daftar</button><p class="text-center small mt-3">Sudah punya akun? <a href="#/login" class="text-maroon text-decoration-none">Masuk</a></p></form></div>`,
+  daftar: () => `<section class="auth-card box3d">
+    <div class="auth-brand">
+      <img src="img/logo.png" alt="Logo cookies KU-KISS" class="auth-illustration">
+      <h2>KU-KISS</h2>
+    </div>
+    <div class="auth-form-wrap">
+      <h1 class="auth-title">Daftar</h1>
+      <form onsubmit="event.preventDefault();flash('Akun dibuat (demo)');location.hash='#/login'" class="auth-form auth-register-form">
+        <label for="regNama" class="fw-medium">Nama Lengkap</label>
+        <input id="regNama" type="text" class="form-control auth-input" placeholder="Masukkan Nama Lengkap" autocomplete="name" required>
+        <label for="regEmail" class="fw-medium mt-3">Email</label>
+        <input id="regEmail" type="email" class="form-control auth-input" placeholder="Masukkan Email" autocomplete="email" required>
+        <label for="regPw" class="fw-medium mt-3">Password</label>
+        <div class="input-group auth-password">
+          <input id="regPw" type="password" class="form-control auth-input" placeholder="Masukkan Password" autocomplete="new-password" required>
+          <button type="button" class="btn auth-eye" aria-label="Tampilkan password" onclick="toggleAuthPassword('regPw', this)"><i class="bi bi-eye"></i></button>
+        </div>
+        <label for="regPhone" class="fw-medium mt-3">Nomor Handphone</label>
+        <input id="regPhone" type="tel" class="form-control auth-input" placeholder="Masukkan Nomor Handphone" autocomplete="tel" required>
+        <button class="btn btn-maroon auth-submit mt-3" type="submit">Daftar</button>
+        <p class="text-center auth-switch">Sudah punya akun? <a href="#/login" class="text-maroon text-decoration-none">Masuk</a></p>
+      </form>
+    </div>
+  </section>`,
 
   // Halaman profil pelanggan: data disimpan sementara di localStorage.
   profil: () => {
@@ -107,13 +164,32 @@ const P = {
       <div class="profile-heading"><img src="${profil.foto || 'img/profile.png'}" alt="Foto profil" class="profile-avatar"><h4>${profil.nama}</h4></div>
       <form class="profile-body" onsubmit="saveProfile(event)">
         <div class="profile-fields">
-          <label>Nama Lengkap<input class="form-control" id="profileNama" value="${profil.nama}" required></label>
-          <label>Email<input class="form-control" id="profileEmail" type="email" value="${profil.email}" required></label>
-          <label>Nomor Handphone<input class="form-control" id="profileTelepon" type="tel" value="${profil.telepon}" placeholder="Masukkan nomor handphone"></label>
-          <label>Password saat ini<input class="form-control" id="profilePassword" type="password" value="${profil.password}" placeholder="Masukkan password"></label>
+          <div class="profile-edit-row">
+            <span class="profile-edit-label">Nama Lengkap</span>
+            <span class="profile-edit-value" id="profileNamaValue">${profil.nama || '-'}</span>
+            <input class="form-control profile-edit-input" id="profileNama" value="${profil.nama || ''}" required hidden>
+            <button type="button" class="btn btn-sm btn-outline-maroon profile-edit-button" onclick="editProfileField('Nama')">Edit</button>
+          </div>
+          <div class="profile-edit-row">
+            <span class="profile-edit-label">Email</span>
+            <span class="profile-edit-value">${profil.email || user.email}</span>
+            <span class="profile-email-note">Tidak dapat diubah</span>
+          </div>
+          <div class="profile-edit-row">
+            <span class="profile-edit-label">Nomor Handphone</span>
+            <span class="profile-edit-value" id="profileTeleponValue">${profil.telepon || '-'}</span>
+            <input class="form-control profile-edit-input" id="profileTelepon" type="tel" value="${profil.telepon || ''}" placeholder="Masukkan nomor handphone" hidden>
+            <button type="button" class="btn btn-sm btn-outline-maroon profile-edit-button" onclick="editProfileField('Telepon')">Edit</button>
+          </div>
+          <div class="profile-edit-row">
+            <span class="profile-edit-label">Password saat ini</span>
+            <span class="profile-edit-value" id="profilePasswordValue">${profil.password ? '••••••••' : 'Belum diatur'}</span>
+            <input class="form-control profile-edit-input" id="profilePassword" type="password" value="${profil.password || ''}" placeholder="Masukkan password" hidden>
+            <button type="button" class="btn btn-sm btn-outline-maroon profile-edit-button" onclick="editProfileField('Password')">Edit</button>
+          </div>
         </div>
         <div class="profile-photo"><img id="profilePreview" src="${profil.foto || 'img/profile.png'}" alt="Foto profil"><label class="btn btn-sm btn-maroon">Ubah Foto<input id="profileFoto" type="file" accept="image/*" hidden onchange="previewProfilePhoto(event)"></label><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeProfilePhoto()">Hapus Foto</button></div>
-        <div class="text-end mt-4"><button class="btn btn-maroon" type="submit">Simpan Perubahan</button></div>
+        <div class="text-end mt-4"><button id="profileSaveButton" class="btn btn-maroon" type="submit" hidden>Simpan Perubahan</button></div>
       </form>
     </div>`;
   }
@@ -182,18 +258,38 @@ function order() { const ongkir = mode == 'Pengantaran' ? ship : 0, al = mode ==
 function doLogin(e) { e.preventDefault(); user = { email: val('em'), role: val('em').includes('admin') ? 'admin' : 'customer' }; save('user', user); location.hash = user.role == 'admin' ? '#/admin/dashboard' : '#/'; }
 function logout() { user = null; save('user', null); location.hash = '#/'; render(); }
 
+// Menampilkan gambar QRIS asli yang disediakan untuk pembayaran.
+function showQris() {
+  modal('Kode QRIS', '<div class="qris-modal-content"><img src="img/qris.png" alt="Kode QRIS KU-KISS"><p class="text-muted small mb-0 mt-2">Pindai kode QRIS menggunakan aplikasi pembayaran Anda.</p></div>');
+}
+
+// Mengaktifkan kolom edit untuk satu bagian profil.
+function editProfileField(field) {
+  const input = $('#profile' + field);
+  const value = $('#profile' + field + 'Value');
+  const button = document.querySelector(`.profile-edit-button[onclick="editProfileField('${field}')"]`);
+  if (!input) return;
+  input.hidden = false;
+  if (value) value.hidden = true;
+  if (button) button.hidden = true;
+  const saveButton = $('#profileSaveButton');
+  if (saveButton) saveButton.hidden = false;
+  input.focus();
+}
+
 // Menyimpan perubahan data profil pelanggan.
 function saveProfile(event) {
   event.preventDefault();
   const profil = load('profil', {});
   profil.nama = $('#profileNama').value.trim();
-  profil.email = $('#profileEmail').value.trim();
+  // Email hanya ditampilkan dan tidak dapat diubah dari halaman profil.
+  profil.email = user.email;
   profil.telepon = $('#profileTelepon').value.trim();
   profil.password = $('#profilePassword').value;
   profil.foto = profil.foto || '';
   save('profil', profil);
   user.nama = profil.nama;
-  user.email = profil.email;
+  // Pertahankan email akun yang sudah terdaftar.
   user.telepon = profil.telepon;
   save('user', user);
   flash('Profil berhasil disimpan');

@@ -1,5 +1,5 @@
 /* =========================================================
-   KU-KISS — Gaya utama website
+   Gaya utama website
    Warna utama dan font yang digunakan di seluruh halaman.
    ========================================================= */
 :root {
@@ -521,5 +521,555 @@ footer {
 
   .box3d {
     box-shadow: none;
+  }
+}
+
+
+/* =========================================================
+   Revisi tampilan pelanggan
+   ========================================================= */
+
+/* Gambar pada halaman detail produk berada di tengah area gambar. */
+.product-detail-image {
+  flex: 0 1 340px;
+  min-width: 0;
+  min-height: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: #fff;
+}
+
+.product-detail-image img {
+  display: block;
+  width: 100%;
+  max-width: 300px;
+  height: 260px;
+  object-fit: contain;
+  object-position: center;
+  margin-inline: auto;
+}
+
+.product-detail-info {
+  min-width: 0;
+}
+
+/* Kartu Cookies Terpopuler memakai bentuk dan interaksi lembut seperti katalog. */
+.popular-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  align-items: stretch;
+}
+
+.popular-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  min-width: 0;
+  padding: 12px 8px;
+  color: #292929;
+  background: #fff;
+  border: 1px solid #f0e7e2;
+  border-radius: 14px;
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.popular-card:hover,
+.popular-card:focus-visible {
+  border-color: #e3c9c4;
+  border-radius: 14px;
+  transform: translateY(-4px);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.13);
+  outline: none;
+}
+
+.popular-card:active {
+  transform: translateY(-1px) scale(0.985);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
+}
+
+.popular-card .pop {
+  width: clamp(54px, 6vw, 78px);
+  height: clamp(54px, 6vw, 78px);
+  flex: 0 0 auto;
+}
+
+.popular-name {
+  display: block;
+  width: 100%;
+  font-size: clamp(10px, 0.9vw, 13px);
+  line-height: 1.4;
+  overflow-wrap: normal;
+  word-break: normal;
+  text-wrap: balance;
+}
+
+.profile-static-field {
+  display: grid;
+  grid-template-columns: minmax(100px, 0.42fr) minmax(0, 1fr);
+  gap: 12px;
+  align-items: baseline;
+  color: #555;
+  font-size: 14px;
+}
+
+.profile-static-label::after {
+  content: ":";
+  float: right;
+  margin-left: 8px;
+}
+
+.profile-static-value {
+  min-width: 0;
+  color: #6b6b6b;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 768px) {
+  .product-detail-image {
+    flex: 1 1 100%;
+    min-height: 220px;
+  }
+
+  .product-detail-image img {
+    width: min(100%, 280px);
+    height: 220px;
+  }
+
+  .popular-list {
+    gap: 8px;
+  }
+
+  .popular-card {
+    padding: 10px 5px;
+  }
+
+  .profile-static-field {
+    grid-template-columns: 125px minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 420px) {
+  .popular-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .popular-name {
+    font-size: 10px;
+  }
+
+  .profile-static-field {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+
+  .profile-static-label::after {
+    float: none;
+  }
+}
+
+
+/* Revisi tambahan: nama produk katalog satu baris */
+.catalog-row {
+  align-items: stretch;
+}
+
+.cat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.cat-name {
+  width: 100%;
+  min-height: 1.5em;
+  white-space: nowrap;
+  font-size: clamp(12px, 1.05vw, 15px);
+  letter-spacing: -0.25px;
+}
+
+/* QRIS modal: tampilkan gambar lengkap dan responsif */
+.qris-modal-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px;
+  text-align: center;
+}
+
+.qris-modal-content img {
+  display: block;
+  width: min(100%, 520px);
+  max-height: 72vh;
+  object-fit: contain;
+  border-radius: 12px;
+  border: 1px solid #eee;
+}
+
+/* Profil: data tampil seperti baris informasi, tombol Edit per bagian */
+.profile-edit-row {
+  display: grid;
+  grid-template-columns: minmax(125px, 0.42fr) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 42px;
+  color: #555;
+  font-size: 14px;
+}
+
+.profile-edit-label {
+  color: #292929;
+  font-weight: 500;
+}
+
+.profile-edit-value {
+  min-width: 0;
+  color: #707070;
+  overflow-wrap: anywhere;
+}
+
+.profile-email-note {
+  color: #999;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.profile-edit-input {
+  min-width: 0;
+  grid-column: 2;
+}
+
+.btn-outline-maroon {
+  color: var(--maroon);
+  border: 1px solid var(--maroon);
+  background: #fff;
+  border-radius: 8px;
+  padding: 4px 12px;
+}
+
+.btn-outline-maroon:hover {
+  color: #fff;
+  background: var(--maroon);
+}
+
+#flash {
+  top: 18px;
+  bottom: auto;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  width: max-content;
+  max-width: calc(100vw - 28px);
+  padding: 12px 16px;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  animation: flash-in 0.2s ease-out;
+}
+
+#flash button {
+  border: 0;
+  padding: 0 2px;
+  color: inherit;
+  background: transparent;
+  font-size: 22px;
+  line-height: 1;
+}
+
+@keyframes flash-in {
+  from { opacity: 0; transform: translate(-50%, -8px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+@media (max-width: 575px) {
+  .cat {
+    min-width: 210px;
+  }
+
+  .cat-name {
+    font-size: 12px;
+    letter-spacing: -0.35px;
+  }
+
+  .profile-edit-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px 10px;
+  }
+
+  .profile-edit-label {
+    grid-column: 1;
+  }
+
+  .profile-edit-value,
+  .profile-edit-input {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .profile-edit-button {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+
+  .profile-email-note {
+    grid-column: 1 / -1;
+    grid-row: 3;
+  }
+}
+
+
+/* Revisi: halaman detail produk mengikuti layout contoh, gambar besar di kiri */
+.product-detail {
+  display: flex;
+  flex-wrap: nowrap !important;
+  align-items: stretch;
+  overflow: hidden;
+  min-height: 320px;
+}
+
+.product-detail-image {
+  flex: 0 0 38%;
+  min-width: 280px;
+  min-height: 320px;
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+}
+
+.product-detail-image img {
+  width: 100%;
+  max-width: 360px;
+  height: 300px;
+  object-fit: contain;
+  object-position: center;
+}
+
+.product-detail-info {
+  flex: 1 1 0;
+  padding: 28px !important;
+  align-self: center;
+}
+
+/* Simpan Perubahan hanya tampil setelah pengguna memilih Edit */
+#profileSaveButton[hidden] {
+  display: none !important;
+}
+
+@media (max-width: 767px) {
+  .product-detail {
+    flex-wrap: wrap !important;
+  }
+
+  .product-detail-image {
+    flex: 1 1 100%;
+    min-width: 0;
+    min-height: 240px;
+    padding: 18px;
+  }
+
+  .product-detail-image img {
+    max-width: 280px;
+    height: 230px;
+  }
+
+  .product-detail-info {
+    flex: 1 1 100%;
+    padding: 20px !important;
+  }
+}
+
+
+/* =========================================================
+   Halaman Masuk dan Daftar — mengikuti layout referensi Figma
+   ========================================================= */
+.auth-card {
+  width: 100%;
+  max-width: 1190px;
+  min-height: 580px;
+  margin: 28px auto 42px;
+  padding: 56px clamp(28px, 6vw, 82px);
+  display: grid;
+  grid-template-columns: minmax(260px, 0.82fr) minmax(360px, 1.18fr);
+  align-items: center;
+  gap: clamp(36px, 6vw, 88px);
+  background: #fff;
+  border-radius: 15px;
+}
+
+.auth-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-width: 0;
+}
+
+.auth-illustration {
+  display: block;
+  width: min(100%, 310px);
+  height: 310px;
+  object-fit: contain;
+  margin: 0 auto 22px;
+}
+
+.auth-brand h2 {
+  margin: 0;
+  color: var(--maroon);
+  font-size: clamp(1.65rem, 2.2vw, 2rem);
+  font-weight: 600;
+}
+
+.auth-form-wrap {
+  width: 100%;
+  max-width: 510px;
+  justify-self: center;
+}
+
+.auth-title {
+  margin: 0 0 30px;
+  color: #353535;
+  font-size: clamp(1.7rem, 2.2vw, 2rem);
+  font-weight: 600;
+  text-align: center;
+}
+
+.auth-form label {
+  display: block;
+  margin-bottom: 4px;
+  color: #333;
+  font-size: 1rem;
+}
+
+.auth-input {
+  min-height: 48px;
+  border: 1px solid #aaa;
+  border-radius: 9px !important;
+  padding: 10px 13px;
+  font-family: inherit;
+  font-size: 0.96rem;
+  box-shadow: none !important;
+}
+
+.auth-input::placeholder {
+  color: #a0a0a0;
+  opacity: 1;
+}
+
+.auth-input:focus {
+  border-color: var(--maroon);
+  outline: 0;
+}
+
+.auth-password {
+  position: relative;
+}
+
+.auth-password .auth-input {
+  padding-right: 48px;
+}
+
+.auth-eye {
+  position: absolute;
+  z-index: 5;
+  right: 4px;
+  top: 3px;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  color: #999;
+  background: transparent;
+  border-radius: 8px;
+}
+
+.auth-eye:hover,
+.auth-eye:focus {
+  color: var(--maroon);
+  background: #f8f1ef;
+}
+
+.auth-forgot {
+  margin: 15px 0 17px;
+  font-size: 0.9rem;
+}
+
+.auth-submit {
+  width: 100%;
+  min-height: 46px;
+  border-radius: 8px;
+  box-shadow: none;
+  font-size: 1rem;
+}
+
+.auth-switch {
+  margin: 24px 0 0;
+  color: #333;
+  font-size: 0.92rem;
+}
+
+.auth-switch a {
+  font-weight: 500;
+}
+
+.auth-register-form .auth-submit {
+  margin-top: 12px;
+}
+
+.auth-register-form .auth-switch {
+  margin-top: 22px;
+}
+
+@media (max-width: 767.98px) {
+  .auth-card {
+    min-height: auto;
+    margin: 12px auto 28px;
+    padding: 30px 22px 34px;
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+
+  .auth-illustration {
+    width: min(58vw, 210px);
+    height: auto;
+    aspect-ratio: 1 / 1;
+    margin-bottom: 10px;
+  }
+
+  .auth-brand h2 {
+    font-size: 1.55rem;
+  }
+
+  .auth-form-wrap {
+    max-width: 100%;
+  }
+
+  .auth-title {
+    margin-bottom: 22px;
+  }
+
+  .auth-input {
+    min-height: 45px;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 991.98px) {
+  .auth-card {
+    padding: 42px 32px;
+    grid-template-columns: minmax(210px, 0.8fr) minmax(320px, 1.2fr);
+    gap: 32px;
+  }
+
+  .auth-illustration {
+    height: 240px;
   }
 }
