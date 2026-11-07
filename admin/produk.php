@@ -1,0 +1,6 @@
+<?php $aktif = 'produk'; require __DIR__ . '/includes/header.php'; ?>
+<div class="d-flex justify-content-between"><h4>Produk</h4><a class="btn btn-info btn-sm text-white" href="produk-form.php"><i class="bi bi-plus-lg"></i> Tambah Produk</a></div>
+<div class="table-responsive mt-2"><table class="table table-bordered tbl align-middle"><thead><tr><th>No.</th><th>Gambar</th><th>Kode Produk</th><th>Nama Produk</th><th>Kategori</th><th>Deskripsi</th><th>Harga</th><th>Aksi</th></tr></thead><tbody>
+<?php foreach ($produk as $i => $p): ?><tr><td><?= $i + 1 ?></td><td><img src="../img/<?= e($p['gambar']) ?>" alt="<?= e($p['nama']) ?>" style="width:60px"></td><td><?= e($p['kode']) ?></td><td><?= e($p['nama']) ?></td><td><?= e($p['kategori']) ?></td><td><?= e($p['deskripsi']) ?></td><td><?= rp($p['harga']) ?></td><td><?= aksi('produk-form.php?id=' . $p['id']) ?></td></tr><?php endforeach ?>
+</tbody></table></div><small class="text-muted">Menampilkan 1 sampai <?= count($produk) ?> dari <?= count($produk) ?> Data</small>
+<?php require __DIR__ . '/includes/footer.php';
