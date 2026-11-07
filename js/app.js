@@ -106,6 +106,43 @@ const P = {
     <div class="sec"><span class="chip">Upload Bukti Pembayaran</span><input type="file" id="bk" class="d-none" accept="image/*" onchange="bukti=true;$('#bkl').textContent=this.files[0].name"><button class="btn btn-maroon w-100 mt-2" onclick="$('#bk').click()"><i class="bi bi-upload"></i> <span id="bkl">Upload Disini</span></button></div>
     <div class="d-flex justify-content-between my-3"><span>Total Harga</span><span>${rp(sub() + ongkir)}</span></div><button class="btn btn-maroon w-100 py-2" onclick="order()">Pesan</button></div>`; },
 
+  pesanan: id => {
+    const pesanan = orders.find(item => String(item.id) === String(id));
+    if (!pesanan) return `<div class="box3d p-5 text-center"><h5 class="text-maroon">Pesanan tidak ditemukan</h5><a href="#/menu" class="btn btn-maroon mt-2">Kembali ke Menu</a></div>`;
+
+    const statusIndex = Math.max(0, ST.indexOf(pesanan.status));
+    const ongkir = Number(pesanan.ongkir || 0);
+    const subtotal = Number(pesanan.subtotal ?? (pesanan.total - ongkir));
+    const tahap = [
+      'Makanan sedang disiapkan',
+      pesanan.alamat === 'Pick Up' ? 'Pesanan siap diambil' : 'Makanan sedang diantar',
+      'Makanan telah diterima pembeli'
+    ];
+
+    return `<section class="order-page">
+      <ol class="order-progress" aria-label="Progres pesanan">
+        ${tahap.map((label, index) => `<li class="${index <= statusIndex ? 'is-active' : ''} ${index < statusIndex ? 'is-complete' : ''}">
+          <span class="order-progress-number">${index < statusIndex ? '<i class="bi bi-check-lg"></i>' : index + 1}</span>
+          <span class="order-progress-label">${label}</span>
+        </li>`).join('')}
+      </ol>
+      <div class="order-summary box3d">
+        <div class="order-items">
+          ${pesanan.items.map(item => `<div class="order-item"><span>${item.nama}</span><span class="order-quantity">${item.qty}x</span><span class="order-item-price">${rp(Number(item.harga || 0) * item.qty)}</span></div>`).join('')}
+        </div>
+        <div class="order-totals">
+          <div><span>Total Harga</span><span>${rp(subtotal)}</span></div>
+          <div><span>Ongkos Kirim</span><span>${rp(ongkir)}</span></div>
+          <div class="order-grand-total"><span>Total Pembayaran</span><span>${rp(pesanan.total)}</span></div>
+        </div>
+      </div>
+      <div class="order-aftercare">
+        <span class="text-muted small">Status: <strong>${pesanan.status}</strong> · Pesanan #${pesanan.id}</span>
+        <a href="#/menu" class="btn btn-outline-maroon btn-sm">Kembali ke Menu</a>
+      </div>
+    </section>`;
+  },
+
   login: () => `<section class="auth-card box3d">
     <div class="auth-brand">
       <img src="img/logo.png" alt="Logo cookies KU-KISS" class="auth-illustration">
@@ -256,8 +293,9 @@ const sub = () => cart.filter(c => c.pick).reduce((s, c) => s + prod(c.id).harga
 function toCheckout() { if (!cart.some(c => c.pick)) return flash('Pilih produk dulu'); if (!user) { flash('Silakan masuk dulu'); return location.hash = '#/login'; } location.hash = '#/checkout'; }
 function order() { const ongkir = mode == 'Pengantaran' ? ship : 0, al = mode == 'Pengantaran' ? (val('alamat') || '') : 'Pick Up'; if (mode == 'Pengantaran' && !al) return flash('Isi alamat dulu');
   const its = cart.filter(c => c.pick); const profilPelanggan = load('profil', {});
-  orders.push({ id: Date.now(), nama: profilPelanggan.nama || user.nama || user.email.split('@')[0], telepon: profilPelanggan.telepon || user.telepon || '-', items: its.map(c => ({ nama: prod(c.id).nama, qty: c.qty })), total: sub() + ongkir, alamat: al, tgl: new Date().toISOString().slice(0, 10) + ' ' + new Date().toTimeString().slice(0, 8), bukti, status: 'Diproses' });
-  save('orders', orders); cart = cart.filter(c => !c.pick); save('cart', cart); bukti = false; flash('Pesanan berhasil dibuat!'); location.hash = '#/'; }
+  const subtotal = sub(), id = Date.now();
+  orders.push({ id, nama: profilPelanggan.nama || user.nama || user.email.split('@')[0], telepon: profilPelanggan.telepon || user.telepon || '-', items: its.map(c => ({ nama: prod(c.id).nama, qty: c.qty, harga: prod(c.id).harga })), subtotal, ongkir, total: subtotal + ongkir, alamat: al, tgl: new Date().toISOString().slice(0, 10) + ' ' + new Date().toTimeString().slice(0, 8), bukti, status: 'Diproses' });
+  save('orders', orders); cart = cart.filter(c => !c.pick); save('cart', cart); bukti = false; flash('Pesanan berhasil dibuat!'); location.hash = '#/pesanan/' + id; }
 function doLogin(e) { e.preventDefault(); user = { email: val('em'), role: val('em').includes('admin') ? 'admin' : 'customer' }; save('user', user); location.hash = user.role == 'admin' ? '#/admin/dashboard' : '#/'; }
 function logout() { user = null; save('user', null); location.hash = '#/'; render(); }
 
