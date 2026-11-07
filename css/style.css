@@ -502,6 +502,26 @@ footer {
   .profile-heading h4 {
     font-size: 1rem;
   }
+
+  .order-items,
+  .order-totals {
+    padding: 20px 16px;
+  }
+
+  .order-item {
+    grid-template-columns: minmax(0, 1fr) 34px minmax(100px, auto);
+    gap: 6px;
+    font-size: 12px;
+  }
+
+  .order-totals > div {
+    font-size: 12px;
+  }
+
+  .order-aftercare {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 }
 
 /* Saat laporan dicetak, sembunyikan tombol navigasi dan aksi. */
@@ -524,6 +544,134 @@ footer {
   }
 }
 
+.order-page {
+  max-width: 930px;
+  margin: 0 auto;
+  padding: 8px 0 16px;
+}
+
+.order-progress {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  max-width: 470px;
+  margin: 0 auto 28px;
+  padding: 0;
+  list-style: none;
+}
+
+.order-progress li {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: #777;
+  text-align: center;
+}
+
+.order-progress li:not(:last-child)::after {
+  position: absolute;
+  z-index: 0;
+  top: 12px;
+  left: calc(50% + 15px);
+  width: calc(100% - 30px);
+  height: 5px;
+  background: #e8e4e1;
+  content: '';
+}
+
+.order-progress li.is-complete:not(:last-child)::after {
+  background: var(--maroon);
+}
+
+.order-progress-number {
+  z-index: 1;
+  display: grid;
+  width: 25px;
+  height: 25px;
+  place-items: center;
+  border-radius: 50%;
+  background: #e8e4e1;
+  color: #777;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.order-progress li.is-active {
+  color: var(--maroon);
+}
+
+.order-progress li.is-active .order-progress-number {
+  background: var(--maroon);
+  color: #fff;
+}
+
+.order-progress-label {
+  max-width: 125px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.order-summary {
+  overflow: hidden;
+}
+
+.order-items {
+  min-height: 180px;
+  padding: 28px 38px;
+}
+
+.order-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 46px minmax(120px, auto);
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 10px;
+  font-size: 14px;
+}
+
+.order-item:last-child {
+  margin-bottom: 0;
+}
+
+.order-quantity {
+  color: #777;
+}
+
+.order-item-price {
+  text-align: right;
+}
+
+.order-totals {
+  padding: 22px 38px;
+  background: var(--maroon);
+  color: #fff;
+}
+
+.order-totals > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 10px;
+  font-size: 14px;
+}
+
+.order-totals > div:last-child {
+  margin-bottom: 0;
+}
+
+.order-grand-total {
+  font-weight: 600;
+}
+
+.order-aftercare {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+}
 
 /* =========================================================
    Revisi tampilan pelanggan

@@ -8,7 +8,7 @@
 
 ## Fitur yang tersedia
 ### Pelanggan
-- Home, menu, detail produk, keranjang, checkout, login, dan daftar.
+- Home, menu, detail produk, keranjang, checkout, status/progres pesanan, login, dan daftar.
 - Ikon profil pada navbar membuka halaman profil.
 - Profil dapat menyimpan nama, email, nomor handphone, password demo, dan foto profil di `localStorage`.
 
