@@ -6,6 +6,8 @@ const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAl
 const toggleAuthPassword = (id, button) => { const input = document.getElementById(id); if (!input) return; input.type = input.type === 'password' ? 'text' : 'password'; button.innerHTML = input.type === 'password' ? '<i class="bi bi-eye"></i>' : '<i class="bi bi-eye-slash"></i>'; button.setAttribute('aria-label', input.type === 'password' ? 'Tampilkan password' : 'Sembunyikan password'); };
 const rp = n => 'Rp ' + Number(n).toLocaleString('id-ID') + ',00';
 const load = (k, d) => JSON.parse(localStorage.getItem(k) || 'null') || d, save = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+const EMPTY_PRODUCT_IMAGE = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160"><rect width="100%" height="100%" fill="#f3f1ef"/></svg>');
+const productImage = image => image ? (image.startsWith('data:image/') ? image : `img/${image}`) : EMPTY_PRODUCT_IMAGE;
 const L = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusod tempor incididunt ut labore et dolore magna aliqua. Quis ipsu msuspendisse';
 const flash = m => {
   const old = document.querySelector('#flash');
@@ -27,22 +29,23 @@ let products = load('products', [
   { id: 5, kode: 'COO:MON-001', nama: 'Cookies Varian Cookie Monster', desc: L, harga: 15000, kat: 'Cookies', stok: 100, img: 'cookie-monster.png' }]);
 // Menyesuaikan data produk demo yang mungkin sudah tersimpan di localStorage.
 products = products.map(p => {
-  if (p.id === 1) p.img = 'matcha.png';
+  const uploadedPhoto = p.img?.startsWith('data:image/');
+  if (p.id === 1 && !uploadedPhoto) p.img = 'matcha.png';
   if (p.id === 2) {
     p.kode = 'COO:ORI-001';
     p.nama = 'Cookies Varian Original';
-    p.img = 'biscoff.png';
+    if (!uploadedPhoto) p.img = 'biscoff.png';
   }
-  if (p.id === 3) p.img = 'redvelvet.png';
+  if (p.id === 3 && !uploadedPhoto) p.img = 'redvelvet.png';
   if (p.id === 4) {
     p.kode = 'COO:DBC-001';
     p.nama = 'Cookies Varian Double Choco';
-    p.img = 'pistachio.png';
+    if (!uploadedPhoto) p.img = 'pistachio.png';
   }
   if (p.id === 5) {
     p.kode = 'COO:MON-001';
     p.nama = 'Cookies Varian Cookie Monster';
-    p.img = 'cookie-monster.png';
+    if (!uploadedPhoto) p.img = 'cookie-monster.png';
   }
   return p;
 });
@@ -73,29 +76,29 @@ const foot = () => `<footer class="py-4"><div class="container row mx-auto g-3">
 <div class="col-md-4"><h6 class="text-maroon">Informasi</h6><div class="text-muted small lh-lg"><i class="bi bi-telephone"></i> 081234567890<br><i class="bi bi-envelope"></i> kukiss@yahoo.co.id<br><i class="bi bi-instagram"></i> kukissmaniez<br><i class="bi bi-facebook"></i> kukiss</div></div></div></footer>`;
 const site = c => `<div class="d-flex flex-column min-vh-100">${nav()}<main class="container py-4 flex-grow-1">${c}</main>${foot()}</div>`;
 const searchBox = (ph, cls = 'mx-auto') => `<div class="search ${cls} mb-4"><i class="bi bi-search"></i><input placeholder="${ph}" value="${q}" onkeydown="if(event.key=='Enter'){q=this.value;location.hash='#/menu';render()}"></div>`;
-const list = (ps, btn) => ps.map(p => `<div class="box3d ri hov d-flex align-items-center mb-4" onclick="go(${p.id})"><img class="ri-img" src="img/${p.img}"><div class="p-3 flex-grow-1"><h6>${p.nama}</h6><p class="text-muted small mb-2">${p.desc}</p><div class="fw-medium">${rp(p.harga)}</div></div>${btn ? `<button class="round-btn me-4" onclick="event.stopPropagation();add(${p.id})"><i class="bi bi-cart-fill"></i></button>` : ''}</div>`).join('');
+const list = (ps, btn) => ps.map(p => `<div class="box3d ri hov d-flex align-items-center mb-4" onclick="go(${p.id})"><img class="ri-img" src="${productImage(p.img)}" alt="${p.nama}"><div class="p-3 flex-grow-1"><h6>${p.nama}</h6><p class="text-muted small mb-2">${p.desc}</p><div class="fw-medium">${rp(p.harga)}</div></div>${btn ? `<button class="round-btn me-4" onclick="event.stopPropagation();add(${p.id})"><i class="bi bi-cart-fill"></i></button>` : ''}</div>`).join('');
 
 // ============================================================
 // 3. HALAMAN PELANGGAN (home, menu, produk, keranjang, checkout)
 // ============================================================
 const P = {
   home: () => searchBox('Cari Disini') + `<div class="row g-4 mb-4"><div class="col-lg-7"><div class="box3d h-100 d-flex align-items-center gap-4 p-4"><img src="img/matcha.jpg" class="hero-img"><div><h5>Best Cookies Varian Matcha</h5><p class="text-muted small">${L}</p><button class="btn btn-maroon w-100" onclick="go(1)">Beli Sekarang</button></div></div></div>
-    <div class="col-lg-5"><div class="box3d h-100 p-4 text-center"><h5 class="mb-3">Cookies Terpopuler</h5><div class="popular-list">${[3, 4, 5].map(i => `<button type="button" class="popular-card hov" onclick="go(${i})" aria-label="Lihat ${prod(i).nama}"><img class="pop mb-2" src="img/${prod(i).img}" alt="${prod(i).nama}"><span class="popular-name">${prod(i).nama}</span></button>`).join('')}</div></div></div></div>
-    <div class="pill mx-auto my-4">Catalog Menu</div><div class="d-flex gap-4 overflow-auto p-3 catalog-row">${products.map(p => `<div class="box3d cat hov"><img src="img/${p.img}" alt="${p.nama}"><h6 class="my-3 cat-name">${p.nama}</h6><button class="btn btn-maroon btn-sm w-100" onclick="go(${p.id})">Beli Sekarang</button></div>`).join('')}</div>
+    <div class="col-lg-5"><div class="box3d h-100 p-4 text-center"><h5 class="mb-3">Cookies Terpopuler</h5><div class="popular-list">${[3, 4, 5].map(i => `<button type="button" class="popular-card hov" onclick="go(${i})" aria-label="Lihat ${prod(i).nama}"><img class="pop mb-2" src="${productImage(prod(i).img)}" alt="${prod(i).nama}"><span class="popular-name">${prod(i).nama}</span></button>`).join('')}</div></div></div></div>
+    <div class="pill mx-auto my-4">Catalog Menu</div><div class="d-flex gap-4 overflow-auto p-3 catalog-row">${products.map(p => `<div class="box3d cat hov"><img src="${productImage(p.img)}" alt="${p.nama}"><h6 class="my-3 cat-name">${p.nama}</h6><button class="btn btn-maroon btn-sm w-100" onclick="go(${p.id})">Beli Sekarang</button></div>`).join('')}</div>
     <div id="about" class="row g-4 mt-3"><div class="col-lg-8"><div class="box3d h-100 p-4"><h6>ABOUT US</h6><p class="text-muted small">${(L + ' ').repeat(5)}</p></div></div><div class="col-lg-4"><div class="box3d h-100 p-4 text-center"><img src="img/matcha.jpg" style="width:200px"></div></div></div>`,
 
   menu: () => searchBox('Cari Menu', 'ms-auto') + (list(products.filter(p => p.nama.toLowerCase().includes(q.toLowerCase()))) || '<p>Tidak ditemukan.</p>'),
 
-  produk: id => { const p = prod(id); if (!p) return P.menu(); return `<div class="box3d ri product-detail d-flex flex-wrap mb-4"><div class="product-detail-image"><img src="img/${p.img}" alt="${p.nama}"></div><div class="p-4 flex-grow-1 product-detail-info" style="min-width:260px"><h4>${p.nama}</h4><p class="text-muted">${p.desc}</p><div class="fs-5 mb-3">${rp(p.harga)}</div>
+  produk: id => { const p = prod(id); if (!p) return P.menu(); return `<div class="box3d ri product-detail d-flex flex-wrap mb-4"><div class="product-detail-image"><img src="${productImage(p.img)}" alt="${p.nama}"></div><div class="p-4 flex-grow-1 product-detail-info" style="min-width:260px"><h4>${p.nama}</h4><p class="text-muted">${p.desc}</p><div class="fs-5 mb-3">${rp(p.harga)}</div>
     <div class="d-flex gap-3"><button class="round-btn" onclick="add(${p.id})"><i class="bi bi-cart-fill"></i></button><button class="btn btn-maroon flex-grow-1" onclick="add(${p.id},1)">Beli Sekarang</button></div></div></div>` + list(products.filter(x => x.id != id), 1); },
 
   keranjang: () => !cart.length ? `<div class="box3d p-5 text-center"><h5 class="text-maroon">Keranjang masih kosong</h5><a href="#/menu" class="btn btn-maroon mt-2">Lihat Menu</a></div>` :
     cart.map(c => { const p = prod(c.id); return `<div class="box3d p-4 mb-4 d-flex gap-3 align-items-center"><input type="checkbox" class="form-check-input mt-0" style="width:20px;height:20px" ${c.pick ? 'checked' : ''} onchange="pick(${c.id},this.checked)">
-      <div class="flex-grow-1"><h6>${p.nama}</h6><p class="text-muted small mb-2">${p.desc}</p><div>${rp(p.harga)}</div></div><div class="text-center"><img src="img/${p.img}" style="width:110px;height:100px;object-fit:cover"><div class="stepper"><i class="bi bi-dash-circle" onclick="qty(${c.id},-1)"></i>${c.qty}<i class="bi bi-plus-circle" onclick="qty(${c.id},1)"></i></div></div></div>`; }).join('') +
+      <div class="flex-grow-1"><h6>${p.nama}</h6><p class="text-muted small mb-2">${p.desc}</p><div>${rp(p.harga)}</div></div><div class="text-center"><img src="${productImage(p.img)}" alt="${p.nama}" style="width:110px;height:100px;object-fit:cover"><div class="stepper"><i class="bi bi-dash-circle" onclick="qty(${c.id},-1)"></i>${c.qty}<i class="bi bi-plus-circle" onclick="qty(${c.id},1)"></i></div></div></div>`; }).join('') +
     `<div class="bg-white p-4 rounded-3 box3d"><div class="d-flex justify-content-between mb-3"><span>Total Harga</span><span>${rp(sub())}</span></div><button class="btn btn-maroon w-100 py-2" onclick="toCheckout()">Pesan</button></div>`,
 
   checkout: () => { const items = cart.filter(c => c.pick); if (!items.length) return P.keranjang(); const ongkir = mode == 'Pengantaran' ? ship : 0;
-    return `<div class="box3d p-4 mx-auto" style="max-width:640px"><h6>Ringkasan Pemesanan</h6>${items.map(c => { const p = prod(c.id); return `<div class="d-flex gap-3 align-items-center my-3"><img src="img/${p.img}" style="width:120px;height:110px;object-fit:cover"><div class="flex-grow-1"><h6>${p.nama}</h6><p class="text-muted small mb-0">${p.desc.slice(0, 90)}...</p></div><div class="text-end"><div class="fw-medium">${rp(p.harga)}</div><div class="stepper"><i class="bi bi-dash-circle" onclick="qty(${c.id},-1)"></i>${c.qty}<i class="bi bi-plus-circle" onclick="qty(${c.id},1)"></i></div></div></div>`; }).join('')}
+    return `<div class="box3d p-4 mx-auto" style="max-width:640px"><h6>Ringkasan Pemesanan</h6>${items.map(c => { const p = prod(c.id); return `<div class="d-flex gap-3 align-items-center my-3"><img src="${productImage(p.img)}" alt="${p.nama}" style="width:120px;height:110px;object-fit:cover"><div class="flex-grow-1"><h6>${p.nama}</h6><p class="text-muted small mb-0">${p.desc.slice(0, 90)}...</p></div><div class="text-end"><div class="fw-medium">${rp(p.harga)}</div><div class="stepper"><i class="bi bi-dash-circle" onclick="qty(${c.id},-1)"></i>${c.qty}<i class="bi bi-plus-circle" onclick="qty(${c.id},1)"></i></div></div></div>`; }).join('')}
     <div class="sec"><div class="d-flex justify-content-between mb-2"><span class="chip w-50">Total Pembayaran</span><span class="chip-m w-25">${rp(sub())}</span></div><div class="d-flex justify-content-between"><span class="chip w-50">Total Ongkos Kirim</span><span class="chip-m w-25">${rp(ongkir)}</span></div></div>
     <div class="sec"><div class="d-flex justify-content-center gap-3 mb-2">${['Pengantaran', 'Pick Up'].map(t => `<span class="tab ${t == mode ? 'on' : ''}" onclick="mode='${t}';render()">${t}</span>`).join('')}</div>
     ${mode == 'Pengantaran' ? `<div class="opt ${ship == 5000 ? 'on' : ''}" onclick="ship=5000;render()"><span>Standard</span><span>Rp 5.000,00</span></div><div class="opt ${ship == 3000 ? 'on' : ''}" onclick="ship=3000;render()"><span>Hemat</span><span>Rp 3.000,00</span></div><input id="alamat" class="form-control mt-2" placeholder="Alamat pengantaran">` : '<small class="text-muted">Ambil sendiri di lokasi KU-KISS sesuai jadwal PO.</small>'}</div>
@@ -204,7 +207,7 @@ const A = {
     <div class="row g-3 my-1"><div class="col-lg-8"><div class="box3d p-3"><div class="text-center small fw-medium mb-2">Diagram Uang Keuntungan Per Bulan</div><canvas id="ch" height="150"></canvas></div></div>
     <div class="col-lg-4"><div class="box3d p-3 h-100"><div class="small text-danger mb-2"><i class="bi bi-exclamation-triangle"></i> Produk Yang Perlu Di Restock</div>${products.filter(p => p.stok <= 5).map(p => `<div class="restock"><div>${p.nama}<br>${p.kode}</div><span>Sisa ${p.stok} pcs</span></div>`).join('') || '<small class="text-muted">Semua stok aman.</small>'}</div></div></div>
     <h5 class="mt-4">Pencatatan Transaksi</h5>${sales()}`; },
-  produk: () => `<div class="d-flex justify-content-between"><h4>Produk</h4><button class="btn btn-info btn-sm text-white" onclick="prodForm()">+ Tambah Produk</button></div>${tbl(['No.', 'Kode Produk', 'Nama Produk', 'Deskripsi', 'Harga', 'Aksi'], products.map((p, i) => `<tr><td>${i + 1}</td><td>${p.kode}</td><td>${p.nama}</td><td>${p.desc.slice(0, 70)}</td><td>${rp(p.harga)}</td><td>${acts(`prodForm(${p.id})`, `del('products',${p.id})`)}</td></tr>`))}`,
+  produk: () => `<div class="d-flex justify-content-between"><h4>Produk</h4><button class="btn btn-info btn-sm text-white" onclick="prodForm()">+ Tambah Produk</button></div>${tbl(['No.', 'Foto', 'Kode Produk', 'Nama Produk', 'Deskripsi', 'Harga', 'Aksi'], products.map((p, i) => `<tr><td>${i + 1}</td><td><img src="${productImage(p.img)}" alt="${p.nama}" style="width:60px;height:60px;object-fit:cover"></td><td>${p.kode}</td><td>${p.nama}</td><td>${p.desc.slice(0, 70)}</td><td>${rp(p.harga)}</td><td>${acts(`prodForm(${p.id})`, `del('products',${p.id})`)}</td></tr>`))}`,
   kategori: () => `<div class="d-flex justify-content-between"><h4>Kategori</h4><button class="btn btn-info btn-sm text-white" onclick="catForm()">+ Tambah Kategori</button></div>${tbl(['No.', 'ID Kategori', 'Nama Produk', 'Aksi'], cats.map((c, i) => `<tr><td>${i + 1}</td><td>${c.kode}</td><td>${c.nama}</td><td>${acts(`catForm(${i})`, `delCat(${i})`)}</td></tr>`))}`,
   stok: () => `<h4>Stock</h4>${tbl(['No.', 'Kode Produk', 'Nama Produk', 'Stock', 'Aksi'], products.map((p, i) => `<tr><td>${i + 1}</td><td>${p.kode}</td><td>${p.nama}</td><td>${p.stok}</td><td><button class="btn btn-sm btn-warning text-white" onclick="stokForm(${p.id})"><i class="bi bi-pencil-fill"></i></button></td></tr>`))}`,
   penjualan: () => `<h4>Penjualan</h4>${sales()}`,
@@ -243,7 +246,7 @@ const adminLayout = (r, c) => `<div class="d-flex"><aside class="side d-flex fle
 // ============================================================
 // 5. AKSI DAN FORM (tambah, edit, hapus, login, checkout, profil)
 // ============================================================
-function modal(t, b, ok) { $('#mt').textContent = t; $('#mb').innerHTML = b; $('#mok').style.display = ok ? '' : 'none'; $('#mok').onclick = () => { ok(); bootstrap.Modal.getInstance($('#m')).hide(); render(); }; bootstrap.Modal.getOrCreateInstance($('#m')).show(); }
+function modal(t, b, ok) { $('#mt').textContent = t; $('#mb').innerHTML = b; $('#mok').style.display = ok ? '' : 'none'; $('#mok').onclick = () => { if (ok() === false) return; bootstrap.Modal.getInstance($('#m')).hide(); render(); }; bootstrap.Modal.getOrCreateInstance($('#m')).show(); }
 const fld = (id, l, v = '', t = 'text') => `<label class="small mt-2">${l}</label><input id="${id}" type="${t}" class="form-control" value="${v}">`;
 const val = id => $('#' + id).value;
 function add(id, buy) { const c = cart.find(x => x.id == id); c ? c.qty++ : cart.push({ id, qty: 1, pick: true }); save('cart', cart); flash('Ditambahkan ke keranjang'); if (buy) location.hash = '#/keranjang'; }
@@ -328,9 +331,89 @@ function showProof() {
 const persist = () => { save('products', products); save('cats', cats); save('outs', outs); save('orders', orders); };
 function del(k, id) { if (!confirm('Hapus data ini?')) return; if (k == 'products') products = products.filter(x => x.id != id); else outs = outs.filter(x => x.id != id); persist(); render(); }
 function delCat(i) { if (confirm('Hapus kategori?')) { cats.splice(i, 1); persist(); render(); } }
-function prodForm(id) { const p = id ? prod(id) : { kode: '', nama: '', desc: '', harga: '', kat: 'Cookies', stok: 0 };
-  modal(id ? 'Edit Produk' : 'Tambah Produk', fld('f1', 'Kode Produk', p.kode) + fld('f2', 'Nama Produk', p.nama) + fld('f3', 'Deskripsi', p.desc) + fld('f4', 'Harga', p.harga, 'number') + fld('f5', 'Stok', p.stok, 'number'),
-    () => { const d = { kode: val('f1'), nama: val('f2'), desc: val('f3'), harga: +val('f4'), stok: +val('f5') }; id ? Object.assign(p, d) : products.push({ id: Date.now(), kat: 'Cookies', img: 'logo.png', ...d }); persist(); }); }
+let productPhotoRequest = 0;
+function prodForm(id) { productPhotoRequest++; const p = id ? prod(id) : { kode: '', nama: '', desc: '', harga: '', kat: 'Cookies', stok: 0, img: '' };
+  modal(id ? 'Edit Produk' : 'Tambah Produk', fld('f1', 'Kode Produk', p.kode) + fld('f2', 'Nama Produk', p.nama) + fld('f3', 'Deskripsi', p.desc) + fld('f4', 'Harga', p.harga, 'number') + fld('f5', 'Stok', p.stok, 'number') +
+    `<label for="f6" class="small mt-2">Foto Produk</label><input id="f6" type="file" class="form-control" accept="image/jpeg,image/png,image/webp" onchange="previewProductPhoto(event)"><small id="productPhotoStatus" class="form-text">JPG, PNG, atau WebP (maks. 8 MB). Foto disimpan di browser ini.</small><div><img id="productPhotoPreview" src="${productImage(p.img)}" alt="Pratinjau foto produk" class="mt-2" style="width:90px;height:90px;object-fit:cover" ${p.img ? '' : 'hidden'}></div>`,
+    () => {
+      const photoInput = $('#f6');
+      if (photoInput.files.length && !photoInput.dataset.imageData) return false;
+      const d = { kode: val('f1'), nama: val('f2'), desc: val('f3'), harga: +val('f4'), stok: +val('f5') };
+      if (photoInput.dataset.imageData) d.img = photoInput.dataset.imageData;
+      const previous = id ? { ...p } : null;
+      if (id) Object.assign(p, d);
+      else products.push({ id: Date.now(), kat: 'Cookies', img: '', ...d });
+      try {
+        save('products', products);
+      } catch (error) {
+        if (previous) Object.assign(p, previous);
+        else products.pop();
+        flash('Produk tidak dapat disimpan. Ruang penyimpanan browser mungkin penuh.');
+        return false;
+      }
+    }); }
+
+function previewProductPhoto(event) {
+  const input = event.target;
+  const file = input.files[0];
+  const button = $('#mok');
+  const status = $('#productPhotoStatus');
+  if (!file) return;
+  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+    input.value = '';
+    status.textContent = 'Pilih foto berformat JPG, PNG, atau WebP.';
+    flash('Format foto tidak didukung.');
+    return;
+  }
+  if (file.size > 8 * 1024 * 1024) {
+    input.value = '';
+    status.textContent = 'Ukuran foto maksimal 8 MB.';
+    flash('Ukuran foto maksimal 8 MB.');
+    return;
+  }
+
+  input.dataset.imageData = '';
+  const request = ++productPhotoRequest;
+  button.disabled = true;
+  status.textContent = 'Memproses foto...';
+  const fail = message => {
+    if (request !== productPhotoRequest) return;
+    input.dataset.imageData = '';
+    button.disabled = false;
+    status.textContent = message;
+    flash(message);
+  };
+  const reader = new FileReader();
+  reader.onerror = () => fail('Foto gagal dibaca. Silakan pilih ulang.');
+  reader.onload = () => {
+    if (request !== productPhotoRequest) return;
+    const image = new Image();
+    image.onerror = () => fail('Foto tidak dapat dibuka. Silakan pilih file gambar lain.');
+    image.onload = () => {
+      if (request !== productPhotoRequest) return;
+      const scale = Math.min(1, 1000 / Math.max(image.width, image.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(image.width * scale);
+      canvas.height = Math.round(image.height * scale);
+      const context = canvas.getContext('2d');
+      if (!context) return fail('Foto tidak dapat diproses di browser ini.');
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      try {
+        input.dataset.imageData = canvas.toDataURL('image/jpeg', 0.82);
+      } catch (error) {
+        return fail('Foto tidak dapat diproses di browser ini.');
+      }
+      const preview = $('#productPhotoPreview');
+      if (!preview) return;
+      preview.src = input.dataset.imageData;
+      preview.hidden = false;
+      status.textContent = 'Foto siap disimpan.';
+      button.disabled = false;
+    };
+    image.src = reader.result;
+  };
+  reader.readAsDataURL(file);
+}
 function catForm(i) { const c = cats[i]; modal(c ? 'Edit Kategori' : 'Tambah Kategori', fld('f1', 'Nama Kategori', c ? c.nama : ''), () => { const n = val('f1'); c ? c.nama = n : cats.push({ kode: n.slice(0, 3).toUpperCase() + ':MAT-00' + (cats.length + 1), nama: n }); persist(); }); }
 function stokForm(id) { const p = prod(id); modal('Edit Stok: ' + p.nama, fld('f1', 'Stok', p.stok, 'number'), () => { p.stok = +val('f1'); persist(); }); }
 function outForm(id) { const o = outs.find(x => x.id == id); modal(o ? 'Edit Pengeluaran' : 'Tambah Pengeluaran', fld('f1', 'Bulan', o ? o.bulan : YM, 'month') + fld('f2', 'Jumlah (Rp)', o ? o.jumlah : '', 'number'), () => { const d = { bulan: val('f1'), jumlah: +val('f2') }; o ? Object.assign(o, d) : outs.push({ id: Date.now(), ...d }); persist(); }); }

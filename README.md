@@ -14,7 +14,7 @@
 
 ### Admin
 - Dashboard ringkasan uang masuk/keluar dan grafik.
-- Kelola produk, kategori, stok, dan status penjualan.
+- Kelola produk, termasuk menambahkan foto, kategori, stok, dan status penjualan.
 - Laporan bulanan serta halaman detail laporan yang dapat dicetak/disimpan sebagai PDF melalui dialog print browser.
 - Tombol bukti pembayaran masih berupa contoh tampilan karena belum terhubung ke backend.
 
@@ -26,6 +26,7 @@
 
 ## Catatan
 - Data saat ini disimpan sementara di `localStorage`, belum menggunakan database/backend.
+- Foto produk yang diunggah dari halaman admin demo diubah ukurannya dan disimpan di `localStorage` browser, sehingga hanya tersedia pada browser/perangkat tersebut.
 - Foto logo, varian Original, Double Choco, Matcha, Red Velvet, dan profil pembeli sudah disesuaikan dengan gambar yang diberikan.
 - Sebelum dipakai sebagai aplikasi nyata, autentikasi, penyimpanan bukti pembayaran, dan transaksi perlu dihubungkan ke backend serta divalidasi.
 
