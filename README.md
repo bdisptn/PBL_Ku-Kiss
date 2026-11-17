@@ -27,17 +27,23 @@ Skrip frontend saat ini menggunakan skrip browser klasik, bukan ES modules. Pert
 ## Skema database
 Backend menggunakan skema PostgreSQL KU-KISS yang sudah ada: `admin`, `pelanggan`, `kategori`, `produk`, `batch_po`, `pesanan`, `detail_pesanan`, `pengeluaran`, `login_percobaan`, dan `notifikasi`. `database/schema.sql` membuat tabel yang belum ada, memperbarui batasan status pembayaran/pesanan, serta menghapus kolom stok produk yang sudah tidak digunakan.
 
-Untuk menyiapkan database baru, buat role dan database PostgreSQL. Ganti password contoh dengan password kuat:
+### Setup lokal melalui pgAdmin (Windows)
+Jalankan pgAdmin dan hubungkan ke server PostgreSQL lokal. Buka **Query Tool** pada database `postgres`, jalankan perintah pertama, lalu jalankan perintah kedua secara terpisah. Ganti password contoh dengan password kuat dan simpan karena akan dipakai di konfigurasi aplikasi:
    ```sql
    CREATE ROLE kukiss_app LOGIN PASSWORD 'GANTI_DENGAN_PASSWORD_KUAT';
+   ```
+   ```sql
    CREATE DATABASE "Ku_Kiss" OWNER kukiss_app ENCODING 'UTF8' TEMPLATE template0;
    ```
-Buat `config/config.php` berisi pengaturan koneksi PostgreSQL (`driver`, `host`, `port`, `name`, `user`, dan `password`). File ini bersifat lokal dan tidak dilacak Git; jangan commit kredensial database. Buat tabel dan katalog awal:
+
+Salin template konfigurasi, lalu buka `config/config.php` dan isi `password` dengan password role `kukiss_app` yang baru dibuat:
    ```powershell
-   psql -h 127.0.0.1 -U kukiss_app -d "Ku_Kiss" -f database/schema.sql
-   psql -h 127.0.0.1 -U kukiss_app -d "Ku_Kiss" -f database/seed.sql
+   Copy-Item config/config.example.php config/config.php
    ```
-Buat akun admin dari terminal menggunakan `php scripts/create-admin.php`, lalu ikuti prompt. Password admin minimal 12 karakter.
+
+Di pgAdmin, klik kanan database `Ku_Kiss` → **Query Tool**, lalu buka dan jalankan `database/schema.sql`. Setelah selesai, buka dan jalankan `database/seed.sql` pada Query Tool yang sama. Jangan jalankan file skema pada database `postgres`.
+
+`config/config.php` bersifat lokal dan tidak dilacak Git; jangan commit kredensial database. Untuk membuat akun admin, jalankan `php scripts/create-admin.php` dari folder proyek, lalu ikuti prompt. Password admin minimal 12 karakter.
 
 Checkout hanya tersedia jika ada batch dengan status `dibuka` yang tanggal bukanya dan tanggal tutupnya mencakup hari ini. Admin dapat membuka menu **Batch PO** di halaman admin, pilih **Buat & Buka Batch PO**, lalu isi nama batch dan tanggalnya. Batch yang jadwalnya bertabrakan dengan batch lain yang masih dibuka akan ditolak. Tombol **Tutup Batch** menghentikan pesanan baru untuk batch tersebut; pesanan yang sudah masuk tetap tersimpan. Jika perlu, batch juga dapat dibuat langsung melalui pgAdmin dengan menyesuaikan username admin:
    ```sql
