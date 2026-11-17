@@ -11,7 +11,7 @@ ${user?.role === 'customer' ? '<li><a class="nav-link" href="#/riwayat"><i class
 </ul></div></div></nav>`;
 const foot = () => `<footer class="py-4"><div class="container row mx-auto g-3"><div class="col-md-8"><div class="brand fs-5"><img src="img/logo.png" class="logo">KU- KISS</div>
 <small class="text-muted d-block mt-2">${PICKUP_ADDRESS}</small></div>
-<div class="col-md-4"><h6 class="text-maroon">Informasi</h6><div class="text-muted small lh-lg"><i class="bi bi-telephone"></i> 081234567890<br><i class="bi bi-envelope"></i> kukiss@yahoo.co.id<br><i class="bi bi-instagram"></i> kukissmaniez<br><i class="bi bi-facebook"></i> kukiss</div></div></div></footer>`;
+<div class="col-md-4"><h6 class="text-maroon">Informasi</h6><div class="text-muted small lh-lg"><i class="bi bi-telephone"></i> 0816 5442 005<br><i class="bi bi-envelope"></i> kukiss@gmail.com<br><i class="bi bi-instagram"></i> houseof.kukiss<br><i class="bi bi-facebook"></i> kukiss.official</div></div></div></footer>`;
 const PICKUP_ADDRESS = 'Jl. Arumba No.13, Tunggulwulung, Kec. Lowokwaru, Kota Malang, Jawa Timur 65143';
 const PICKUP_MAP_URL = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(PICKUP_ADDRESS)}`;
 const pickupLocation = () => `<section class="pickup-location mt-3" aria-labelledby="pickupLocationTitle">
@@ -22,16 +22,23 @@ const pickupLocation = () => `<section class="pickup-location mt-3" aria-labelle
 </section>`;
 const site = c => `<div class="d-flex flex-column min-vh-100">${nav()}<main class="container py-4 flex-grow-1">${c}</main>${foot()}</div>`;
 const searchBox = (ph, cls = 'mx-auto') => `<div class="search ${cls} mb-4"><i class="bi bi-search"></i><input placeholder="${ph}" value="${q}" onkeydown="if(event.key=='Enter'){q=this.value;location.hash='#/menu';render()}"></div>`;
-const list = (ps, btn) => ps.map(p => `<div class="box3d ri hov d-flex align-items-center mb-4" onclick="go(${p.id})"><img class="ri-img" src="${productImage(p.img)}" alt="${p.nama}"><div class="p-3 flex-grow-1"><h6>${p.nama}</h6><p class="text-muted small mb-2">${p.desc}</p><div class="fw-medium">${rp(p.harga)}</div></div>${btn ? `<button class="round-btn me-4" onclick="event.stopPropagation();add(${p.id})"><i class="bi bi-cart-fill"></i></button>` : ''}</div>`).join('');
+const list = (ps, btn) => ps.map(p => `<div class="box3d ri hov d-flex align-items-center mb-4" onclick="go(${p.id})"><img class="ri-img" src="${productImage(p.img)}" alt="${p.nama}"><div class="p-3 flex-grow-1 align-self-start"><h6>${p.nama}</h6><p class="text-muted small mb-2">${p.desc}</p><div class="fw-medium">${rp(p.harga)}</div></div>${btn ? `<button class="round-btn me-4" onclick="event.stopPropagation();add(${p.id})"><i class="bi bi-cart-fill"></i></button>` : ''}</div>`).join('');
 
 // ============================================================
 // 3. HALAMAN PELANGGAN (home, menu, produk, keranjang, checkout)
 // ============================================================
+const goToBestSellerBrownies = () => {
+  const brownie = products.find(product => /brownie/i.test(product.nama) || /brownie/i.test(product.kat));
+  if (brownie) go(brownie.id);
+  else location.hash = '#/menu';
+};
+
 const P = {
-  home: () => searchBox('Cari Disini') + `<div class="row g-4 mb-4"><div class="col-lg-7"><div class="box3d h-100 d-flex align-items-center gap-4 p-4"><img src="img/matcha.jpg" class="hero-img"><div><h5>Best Cookies Varian Matcha</h5><p class="text-muted small">${L}</p><button class="btn btn-maroon w-100" onclick="go(1)">Beli Sekarang</button></div></div></div>
+  home: () => searchBox('Cari Disini') + `<div class="row g-4 mb-4"><div class="col-lg-7"><div class="box3d h-100 d-flex align-items-center gap-4 p-4"><img src="img/brownies.png" class="hero-img"><div><h5>Best Seller Brownies</h5><p class="text-muted small">Cokelat pekat yang kaya dan sedikit pahit berpadu dengan tekstur fudgy yang lembut dan lumer, seperti pelukan hangat dalam setiap gigitan. Dipanggang segar dengan penuh cinta, brownies ini siap jadi si manis favorit yang bikin kamu susah bilang cukup di setiap batch Open PO.</p><button class="btn btn-maroon w-100" onclick="goToBestSellerBrownies()">Beli Sekarang</button></div></div></div>
     <div class="col-lg-5"><div class="box3d h-100 p-4 text-center"><h5 class="mb-3">Cookies Terpopuler</h5><div class="popular-list">${[3, 4, 5].map(i => `<button type="button" class="popular-card hov" onclick="go(${i})" aria-label="Lihat ${prod(i).nama}"><img class="pop mb-2" src="${productImage(prod(i).img)}" alt="${prod(i).nama}"><span class="popular-name">${prod(i).nama}</span></button>`).join('')}</div></div></div></div>
     <div class="pill mx-auto my-4">Catalog Menu</div><div class="d-flex gap-4 overflow-auto p-3 catalog-row">${products.map(p => `<div class="box3d cat hov"><img src="${productImage(p.img)}" alt="${p.nama}"><h6 class="my-3 cat-name">${p.nama}</h6><button class="btn btn-maroon btn-sm w-100" onclick="go(${p.id})">Beli Sekarang</button></div>`).join('')}</div>
-    <div id="about" class="row g-4 mt-3"><div class="col-lg-8"><div class="box3d h-100 p-4"><h6>ABOUT US</h6><p class="text-muted small">${(L + ' ').repeat(5)}</p></div></div><div class="col-lg-4"><div class="box3d h-100 p-4 text-center"><img src="img/matcha.jpg" style="width:200px"></div></div></div>`,
+    <div id="about" class="row g-4 mt-3"><div class="col-lg-8"><div class="box3d h-100 p-4"><h6>ABOUT US</h6><p class="text-muted small">KuKiss lahir dari kecintaan terhadap camilan manis berkualitas. Kami menghadirkan beragam varian soft-baked cookies buatan rumah dengan tekstur renyah di luar dan lembut lumer di dalam, karena kami percaya cookies premium tidak harus menguras kantong. Setiap varian dibuat dengan bahan-bahan pilihan dan resep yang diracik dengan teliti, agar setiap gigitan menghadirkan rasa yang konsisten dan berkesan. Untuk menjaga kesegaran dan cita rasa terbaik, KuKiss dijalankan dengan sistem Open Pre-Order (PO), di mana setiap pesanan dipanggang segar langsung dari oven sehingga tiba di tangan Anda dalam kondisi paling nikmat. Cocok untuk menemani hari-hari Anda, menjadi hadiah istimewa, atau melengkapi momen berkumpul bersama orang tersayang.</p></div></div><div class="col-lg-4"><div class="box3d h-100 p-4 text-center"><img src="img/brownies.png" style="width:200px"></div></div></div>`,
+    // Penjelasan about us
 
   menu: () => searchBox('Cari Menu', 'ms-auto') + (list(products.filter(p => p.nama.toLowerCase().includes(q.toLowerCase()))) || '<p>Tidak ditemukan.</p>'),
 

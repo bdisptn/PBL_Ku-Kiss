@@ -170,7 +170,9 @@ body {
 .ri-img {
   width: 230px;
   height: 150px;
-  object-fit: cover;
+  flex-shrink: 0;
+  object-fit: contain;
+  background: #fff;
 }
 
 .round-btn {
