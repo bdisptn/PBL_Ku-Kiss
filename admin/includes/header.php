@@ -2,7 +2,7 @@
 // Layout atas: sidebar + topbar. Variabel halaman: $aktif (menu aktif).
 require_once __DIR__ . '/helpers.php';
 require_once __DIR__ . '/data_dummy.php';
-$menu = ['index' => ['house-door', 'Dashboard'], 'produk' => ['tag', 'Produk'], 'kategori' => ['archive', 'Kategori'], 'stok' => ['box', 'Stok'], 'penjualan' => ['cash-stack', 'Penjualan'], 'laporan' => ['envelope', 'Laporan']];
+$menu = ['index' => ['house-door', 'Dashboard'], 'produk' => ['tag', 'Produk'], 'penjualan' => ['cash-stack', 'Penjualan'], 'laporan' => ['envelope', 'Laporan']];
 ?><!DOCTYPE html>
 <html lang="id"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Admin KU-KISS</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
