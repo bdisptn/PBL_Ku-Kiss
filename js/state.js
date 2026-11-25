@@ -5,6 +5,9 @@ const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAl
 const toggleAuthPassword = (id, button) => { const input = document.getElementById(id); if (!input) return; input.type = input.type === 'password' ? 'text' : 'password'; button.innerHTML = input.type === 'password' ? '<i class="bi bi-eye"></i>' : '<i class="bi bi-eye-slash"></i>'; button.setAttribute('aria-label', input.type === 'password' ? 'Tampilkan password' : 'Sembunyikan password'); };
 const rp = n => 'Rp ' + Number(n).toLocaleString('id-ID') + ',00';
 const load = (k, d) => JSON.parse(localStorage.getItem(k) || 'null') || d, save = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, char => ({
+  '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+})[char]);
 const EMPTY_PRODUCT_IMAGE = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160"><rect width="100%" height="100%" fill="#f3f1ef"/></svg>');
 const productImage = image => image ? (image.startsWith('data:image/') || image.includes('/') ? image : `img/${image}`) : EMPTY_PRODUCT_IMAGE;
 const API_URL = 'api/index.php';
@@ -24,6 +27,12 @@ const YM = new Date().toLocaleDateString('sv-SE').slice(0, 7);
 let products = [], cats = [], orders = [], outs = [], batches = [], batchProductRecap = [];
 let cart = load('cart', []), user = null, csrf = '', appReady = false, adminDataLoaded = false, ordersLoaded = false;
 let q = '', mode = 'Pengantaran', ship = 5000, bukti = false;
+let deliveryArea = '', deliveryAddress = '';
+let customerNotificationItems = [];
+let customerNotificationsLoaded = false;
+let customerNotificationsRequest = null;
+let notificationRead = new Set(load('customerNotificationRead', []));
+let customerFeedbackDrafts = load('customerFeedbackDrafts', {});
 const prod = id => products.find(p => p.id == id);
 const go = id => location.hash = '#/produk/' + id;
 
@@ -53,6 +62,7 @@ const mapOrder = value => ({
   id: Number(value.id),
   nama: value.customer_name || '',
   telepon: value.customer_phone || '',
+  payment_reason: value.payment_reason || value.rejection_reason || '',
   items: (value.items || []).map(item => ({ nama: item.name, qty: Number(item.quantity), harga: Number(item.unit_price) })),
   subtotal: Number(value.subtotal),
   ongkir: Number(value.shipping_fee),

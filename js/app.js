@@ -28,6 +28,16 @@ async function render() {
     const halamanAdmin = a === 'laporan' && b ? reportDetail(b) : (A[a] || A.dashboard)();
     root.innerHTML = adminLayout(a || 'dashboard', halamanAdmin);
   } else {
+    if (r === 'notifikasi' && user?.role === 'customer' && !customerNotificationsLoaded) {
+      root.innerHTML = site('<div class="box3d p-5 text-center"><div class="spinner-border text-maroon" role="status"></div><p class="mt-3 mb-0">Memuat notifikasi...</p></div>');
+      try {
+        await loadCustomerNotifications();
+      } catch (error) {
+        if (sequence === renderSequence) root.innerHTML = site(`<div class="box3d p-5 text-center">${error.message}<button class="btn btn-maroon d-block mx-auto mt-3" onclick="render()">Coba lagi</button></div>`);
+        return;
+      }
+      if (sequence !== renderSequence) return;
+    }
     if ((r === 'riwayat' || r === 'pesanan') && user && !ordersLoaded) {
       root.innerHTML = site('<div class="box3d p-5 text-center"><div class="spinner-border text-maroon" role="status"></div><p class="mt-3 mb-0">Memuat riwayat pesanan...</p></div>');
       try {
@@ -40,6 +50,13 @@ async function render() {
     }
     const page = r === 'pesanan' && !a ? P.riwayat : P[r || 'home'];
     root.innerHTML = site(page ? page(a) : P.home());
+    if (user?.role === 'customer' && !customerNotificationsLoaded) {
+      loadCustomerNotifications().then(() => {
+        if (sequence === renderSequence) render();
+      }).catch(error => {
+        if (sequence === renderSequence) flash(`Notifikasi gagal dimuat: ${error.message}`);
+      });
+    }
 
     if (r === 'about' && $('#about')) {
       $('#about').scrollIntoView();

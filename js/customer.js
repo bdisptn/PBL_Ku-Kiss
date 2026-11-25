@@ -1,11 +1,16 @@
 // 2. KOMPONEN TAMPILAN PELANGGAN (navbar, footer, pencarian)
 // ============================================================
+const unreadCustomerNotificationCount = () =>
+  customerNotificationItems.filter(item => !notificationRead.has(item.key)).length;
 const nav = () => `<nav class="navbar navbar-expand-lg bg-white nav-3d sticky-top"><div class="container">
 <a class="navbar-brand brand" href="#/"><img src="img/logo.png" class="logo">KU-KISS</a>
 <button class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#nv"><span class="navbar-toggler-icon"></span></button>
 <div id="nv" class="collapse navbar-collapse"><ul class="navbar-nav ms-auto align-items-lg-center gap-lg-4">
 ${[['', 'house', 'Home'], ['menu', 'journal-text', 'Menu'], ['keranjang', 'cart-fill', 'Keranjang'], ['about', 'info-circle', 'About Us']].map(([h, i, t]) => `<li><a class="nav-link" href="#/${h}"><i class="bi bi-${i}"></i> ${t}</a></li>`).join('')}
 ${user?.role === 'customer' ? '<li><a class="nav-link" href="#/riwayat"><i class="bi bi-receipt"></i> Pesanan Saya</a></li>' : ''}
+${user?.role === 'customer' ? `<li><a class="nav-link notification-link" href="#/notifikasi" title="Notifikasi" aria-label="Notifikasi, ${unreadCustomerNotificationCount()} belum dibaca">
+  <span class="notification-bell"><i class="bi bi-bell"></i>${unreadCustomerNotificationCount() ? `<span class="notification-count">${unreadCustomerNotificationCount() > 99 ? '99+' : unreadCustomerNotificationCount()}</span>` : ''}</span>
+</a></li>` : ''}
 <li><a href="${user ? '#/profil' : '#/login'}" class="text-decoration-none" title="Profil">${user?.foto ? `<img src="${productImage(user.foto)}" alt="Foto profil" class="nav-profile-avatar">` : '<i class="bi bi-person-circle avatar"></i>'}</a></li>
 <li>${user ? `<button class="btn btn-sm btn-keluar" onclick="logout()"><i class="bi bi-box-arrow-left"></i> Keluar</button>` : `<a class="btn btn-sm btn-masuk" href="#/login"><i class="bi bi-box-arrow-in-right"></i> Masuk</a>`}</li>
 </ul></div></div></nav>`;
@@ -14,12 +19,68 @@ const foot = () => `<footer class="py-4"><div class="container row mx-auto g-3">
 <div class="col-md-4"><h6 class="text-maroon">Informasi</h6><div class="text-muted small lh-lg"><i class="bi bi-telephone"></i> 0816 5442 005<br><i class="bi bi-envelope"></i> kukiss@gmail.com<br><i class="bi bi-instagram"></i> houseof.kukiss<br><i class="bi bi-facebook"></i> kukiss.official</div></div></div></footer>`;
 const PICKUP_ADDRESS = 'Jl. Arumba No.13, Tunggulwulung, Kec. Lowokwaru, Kota Malang, Jawa Timur 65143';
 const PICKUP_MAP_URL = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(PICKUP_ADDRESS)}`;
+const DELIVERY_AREAS = [
+  'Dinoyo', 'Jatimulyo', 'Ketawanggede', 'Lowokwaru', 'Merjosari',
+  'Mojolangu', 'Tlogomas', 'Tunggulwulung', 'Oro-Oro Dowo', 'Klojen'
+];
+function loadCustomerNotifications() {
+  if (customerNotificationsLoaded) return Promise.resolve();
+  if (customerNotificationsRequest) return customerNotificationsRequest;
+  customerNotificationsRequest = api('orders').then(data => {
+    orders = data.orders.map(mapOrder);
+    ordersLoaded = true;
+    customerNotificationItems = orders.map(order => ({
+      id: order.id,
+      key: `${order.id}:${order.payment_status || ''}:${order.status || ''}`,
+      title: order.payment_status === 'Ditolak' ? 'Pembayaran perlu diperiksa' : 'Pembaruan pesanan',
+      message: order.payment_status === 'Ditolak'
+        ? (order.payment_reason || 'Pembayaran ditolak. Alasan belum tersedia dari sistem.')
+        : `${order.status || order.payment_status || 'Status diperbarui'}${order.alamat ? ` · ${order.alamat}` : ''}`,
+      icon: order.payment_status === 'Ditolak' ? 'bi-exclamation-circle' : 'bi-receipt',
+      createdAt: order.tgl
+    }));
+    customerNotificationItems.push({
+      id: 'batch-po-demo',
+      type: 'demo',
+      key: 'batch-po-demo:opening-in-3-days',
+      title: 'Contoh pengingat pembukaan batch PO',
+      message: 'DEMO: Batch PO akan dibuka dalam 3 hari. Ini simulasi, bukan jadwal sebenarnya.',
+      icon: 'bi-calendar-event'
+    });
+    customerNotificationsLoaded = true;
+  }).finally(() => {
+    customerNotificationsRequest = null;
+  });
+  return customerNotificationsRequest;
+}
+function markNotificationsRead() {
+  customerNotificationItems.forEach(item => notificationRead.add(item.key));
+  save('customerNotificationRead', [...notificationRead]);
+  render();
+}
+async function refreshCustomerNotifications() {
+  customerNotificationsLoaded = false;
+  try {
+    await loadCustomerNotifications();
+    await render();
+  } catch (error) {
+    flash(`Notifikasi gagal dimuat: ${error.message}`);
+  }
+}
 const pickupLocation = () => `<section class="pickup-location mt-3" aria-labelledby="pickupLocationTitle">
   <h6 id="pickupLocationTitle" class="text-maroon"><i class="bi bi-geo-alt-fill me-1"></i>Lokasi Pengambilan KU-KISS</h6>
   <p class="small mb-2">${PICKUP_ADDRESS}</p>
   <div class="pickup-map mb-2"><iframe src="https://maps.google.com/maps?q=${encodeURIComponent(PICKUP_ADDRESS)}&amp;output=embed" title="Peta lokasi pengambilan KU-KISS" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe></div>
   <a class="btn btn-outline-maroon btn-sm" href="${PICKUP_MAP_URL}" target="_blank" rel="noopener noreferrer"><i class="bi bi-map me-1"></i>Buka petunjuk arah di Google Maps</a>
 </section>`;
+const fulfillmentOptions = () => `<div class="fulfillment-options" role="group" aria-label="Pilih metode pengambilan">
+  <button type="button" class="fulfillment-option ${mode === 'Pengantaran' ? 'is-selected' : ''}" aria-pressed="${mode === 'Pengantaran'}" onclick="mode='Pengantaran';render()">
+    <i class="bi bi-truck"></i><span>Pengantaran</span>
+  </button>
+  <button type="button" class="fulfillment-option ${mode === 'Pick Up' ? 'is-selected' : ''}" aria-pressed="${mode === 'Pick Up'}" onclick="mode='Pick Up';render()">
+    <i class="bi bi-shop"></i><span>Pick Up</span>
+  </button>
+</div>`;
 const site = c => `<div class="d-flex flex-column min-vh-100">${nav()}<main class="container py-4 flex-grow-1">${c}</main>${foot()}</div>`;
 const searchBox = (ph, cls = 'mx-auto') => `<div class="search ${cls} mb-4"><i class="bi bi-search"></i><input placeholder="${ph}" value="${q}" onkeydown="if(event.key=='Enter'){q=this.value;location.hash='#/menu';render()}"></div>`;
 const list = (ps, btn) => ps.map(p => `<div class="box3d ri hov d-flex align-items-center mb-4" onclick="go(${p.id})"><img class="ri-img" src="${productImage(p.img)}" alt="${p.nama}"><div class="p-3 flex-grow-1 align-self-start"><h6>${p.nama}</h6><p class="text-muted small mb-2">${p.desc}</p><div class="fw-medium">${rp(p.harga)}</div></div>${btn ? `<button class="round-btn me-4" onclick="event.stopPropagation();add(${p.id})"><i class="bi bi-cart-fill"></i></button>` : ''}</div>`).join('');
@@ -50,14 +111,53 @@ const P = {
       <div class="flex-grow-1"><h6>${p.nama}</h6><p class="text-muted small mb-2">${p.desc}</p><div>${rp(p.harga)}</div></div><div class="text-center"><img src="${productImage(p.img)}" alt="${p.nama}" style="width:110px;height:100px;object-fit:cover"><div class="stepper"><i class="bi bi-dash-circle" onclick="qty(${c.id},-1)"></i>${c.qty}<i class="bi bi-plus-circle" onclick="qty(${c.id},1)"></i></div></div></div>`; }).join('') +
     `<div class="bg-white p-4 rounded-3 box3d"><div class="d-flex justify-content-between mb-3"><span>Total Harga</span><span>${rp(sub())}</span></div><button class="btn btn-maroon w-100 py-2" onclick="toCheckout()">Pesan</button></div>`,
 
-  checkout: () => { const items = cart.filter(c => c.pick); if (!items.length) return P.keranjang(); const ongkir = mode == 'Pengantaran' ? ship : 0;
-    return `<div class="box3d p-4 mx-auto" style="max-width:640px"><h6>Ringkasan Pemesanan</h6>${items.map(c => { const p = prod(c.id); return `<div class="d-flex gap-3 align-items-center my-3"><img src="${productImage(p.img)}" alt="${p.nama}" style="width:120px;height:110px;object-fit:cover"><div class="flex-grow-1"><h6>${p.nama}</h6><p class="text-muted small mb-0">${p.desc.slice(0, 90)}...</p></div><div class="text-end"><div class="fw-medium">${rp(p.harga)}</div><div class="stepper"><i class="bi bi-dash-circle" onclick="qty(${c.id},-1)"></i>${c.qty}<i class="bi bi-plus-circle" onclick="qty(${c.id},1)"></i></div></div></div>`; }).join('')}
-    <div class="sec"><div class="d-flex justify-content-between mb-2"><span class="chip w-50">Total Pembayaran</span><span class="chip-m w-25">${rp(sub())}</span></div><div class="d-flex justify-content-between"><span class="chip w-50">Total Ongkos Kirim</span><span class="chip-m w-25">${rp(ongkir)}</span></div></div>
-    <div class="sec"><div class="d-flex justify-content-center gap-3 mb-2">${['Pengantaran', 'Pick Up'].map(t => `<span class="tab ${t == mode ? 'on' : ''}" onclick="mode='${t}';render()">${t}</span>`).join('')}</div>
-    ${mode == 'Pengantaran' ? `<div class="opt ${ship == 5000 ? 'on' : ''}" onclick="ship=5000;render()"><span>Standard</span><span>Rp 5.000,00</span></div><div class="opt ${ship == 3000 ? 'on' : ''}" onclick="ship=3000;render()"><span>Hemat</span><span>Rp 3.000,00</span></div><input id="alamat" class="form-control mt-2" placeholder="Alamat pengantaran">` : `<small class="text-muted">Ambil sendiri di lokasi KU-KISS sesuai jadwal PO.</small>${pickupLocation()}`}</div>
-    <div class="sec"><div class="d-flex justify-content-between align-items-center gap-2 mb-2"><span class="chip">Detail Pembayaran</span><button type="button" class="btn btn-maroon btn-sm" onclick="showQris()"><i class="bi bi-eye"></i> Lihat Kode QRIS Disini</button></div><div class="d-flex align-items-center gap-2"><i class="bi bi-qr-code fs-4 text-maroon"></i><span class="chip px-5">QRIS</span></div></div>
-    <div class="sec"><span class="chip">Upload Bukti Pembayaran</span><input type="file" id="bk" class="d-none" accept="image/*" onchange="bukti=true;$('#bkl').textContent=this.files[0].name"><button class="btn btn-maroon w-100 mt-2" onclick="$('#bk').click()"><i class="bi bi-upload"></i> <span id="bkl">Upload Disini</span></button></div>
-    <div class="d-flex justify-content-between my-3"><span>Total Harga</span><span>${rp(sub() + ongkir)}</span></div><button class="btn btn-maroon w-100 py-2" onclick="order()">Pesan</button></div>`; },
+  checkout: () => {
+    const items = cart.filter(c => c.pick);
+    if (!items.length) return P.keranjang();
+    const ongkir = mode === 'Pengantaran' ? ship : 0;
+    const areaOptions = DELIVERY_AREAS.map(area =>
+      `<option value="${escapeHTML(area)}" ${deliveryArea === area ? 'selected' : ''}>${escapeHTML(area)}</option>`
+    ).join('');
+    return `<div class="box3d p-4 mx-auto checkout-card">
+      <h5 class="text-maroon">Checkout</h5><h6>Ringkasan Pemesanan</h6>
+      ${items.map(c => {
+        const p = prod(c.id);
+        return `<div class="d-flex gap-3 align-items-center my-3">
+          <img src="${productImage(p.img)}" alt="${escapeHTML(p.nama)}" class="checkout-product-image">
+          <div class="flex-grow-1"><h6>${escapeHTML(p.nama)}</h6><p class="text-muted small mb-0">${escapeHTML(p.desc.slice(0, 90))}${p.desc.length > 90 ? '...' : ''}</p></div>
+          <div class="text-end"><div class="fw-medium">${rp(p.harga)}</div><div class="stepper"><i class="bi bi-dash-circle" onclick="qty(${c.id},-1)"></i>${c.qty}<i class="bi bi-plus-circle" onclick="qty(${c.id},1)"></i></div></div>
+        </div>`;
+      }).join('')}
+      <div class="sec">
+        <div class="d-flex justify-content-between mb-2"><span class="chip">Subtotal</span><span class="chip-m">${rp(sub())}</span></div>
+        <div class="d-flex justify-content-between"><span class="chip">Ongkos Kirim</span><span class="chip-m">${rp(ongkir)}</span></div>
+      </div>
+      <div class="sec">
+        <h6 class="text-maroon">Metode pengambilan</h6>${fulfillmentOptions()}
+        ${mode === 'Pengantaran' ? `
+          <label for="deliveryArea" class="form-label fw-medium">Wilayah pengantaran</label>
+          <select id="deliveryArea" class="form-select mb-2" onchange="deliveryArea=this.value;render()" required>
+            <option value="">Pilih wilayah</option>${areaOptions}
+            <option value="__outside__" ${deliveryArea === '__outside__' ? 'selected' : ''}>Di luar wilayah layanan</option>
+          </select>
+          ${deliveryArea === '__outside__' ? '<div class="alert alert-warning py-2">Layanan pengantaran belum tersedia untuk wilayah tersebut. Pilih Pick Up atau wilayah layanan.</div>' : ''}
+          <label for="alamat" class="form-label fw-medium mt-2">Alamat lengkap</label>
+          <textarea id="alamat" class="form-control" rows="3" maxlength="900" placeholder="Nama jalan, nomor rumah, RT/RW, dan patokan" oninput="deliveryAddress=this.value">${escapeHTML(deliveryAddress)}</textarea>
+          <div class="alert alert-info py-2 mt-3 mb-0"><strong>Estimasi ongkir: ${rp(ongkir)}</strong><br><small>Untuk saat ini tarif masih tetap (Hemat Rp3.000 / Standard Rp5.000), belum dihitung otomatis berdasarkan jarak.</small></div>
+          <div class="d-flex gap-2 mt-2">
+            <button type="button" class="btn btn-outline-maroon flex-fill ${ship === 3000 ? 'active' : ''}" aria-pressed="${ship === 3000}" onclick="ship=3000;render()">Hemat · Rp3.000</button>
+            <button type="button" class="btn btn-outline-maroon flex-fill ${ship === 5000 ? 'active' : ''}" aria-pressed="${ship === 5000}" onclick="ship=5000;render()">Standard · Rp5.000</button>
+          </div>` : `<small class="text-muted">Ambil sendiri di lokasi KU-KISS sesuai jadwal PO.</small>${pickupLocation()}`}
+      </div>
+      <div class="sec">
+        <div class="d-flex justify-content-between align-items-center gap-2 mb-2"><span class="chip">Detail Pembayaran</span><button type="button" class="btn btn-maroon btn-sm" onclick="showQris()"><i class="bi bi-eye"></i> Lihat Kode QRIS</button></div>
+        <div class="d-flex align-items-center gap-2"><i class="bi bi-qr-code fs-4 text-maroon"></i><span class="chip px-5">QRIS</span></div>
+      </div>
+      <div class="sec"><label for="bk" class="chip">Upload Bukti Pembayaran</label><input type="file" id="bk" class="form-control mt-2" accept="image/jpeg,image/png,image/webp" onchange="bukti=true;$('#bkl').textContent=this.files[0].name"><small class="form-text text-muted">Format JPG, PNG, atau WebP.</small></div>
+      <div class="d-flex justify-content-between my-3 fw-semibold"><span>Total Pembayaran</span><span>${rp(sub() + ongkir)}</span></div>
+      <button class="btn btn-maroon w-100 py-2" onclick="order()" ${deliveryArea === '__outside__' ? 'disabled' : ''}>Buat Pesanan</button>
+    </div>`;
+  },
 
   pesanan: id => {
     if (!user) return `<div class="box3d p-5 text-center"><h5>Masuk untuk melihat detail pesanan.</h5><a href="#/login" class="btn btn-maroon mt-2">Masuk</a></div>`;
@@ -69,6 +169,12 @@ const P = {
     const subtotal = Number(pesanan.subtotal ?? (pesanan.total - ongkir));
     const delivery = pesanan.alamat !== 'Pick Up';
     const statusLabel = delivery && pesanan.status === 'Siap Diambil' ? 'Siap Diantar' : pesanan.status;
+    const feedbackDraft = customerFeedbackDrafts[pesanan.id];
+    const feedbackComment = typeof feedbackDraft === 'string' ? feedbackDraft : feedbackDraft?.comment || '';
+    const feedbackMedia = typeof feedbackDraft === 'object' && feedbackDraft
+      ? feedbackDraft.media || feedbackDraft.photo || ''
+      : '';
+    const feedbackIsVideo = feedbackMedia.startsWith('data:video/');
     const tahap = [
       'Makanan sedang disiapkan',
       delivery ? 'Pesanan siap diantar' : 'Pesanan siap diambil',
@@ -80,8 +186,8 @@ const P = {
         <h4 class="mb-0">Detail Pesanan #${pesanan.id}</h4>
         <a href="#/riwayat" class="btn btn-outline-maroon btn-sm"><i class="bi bi-arrow-left"></i> Riwayat Pesanan</a>
       </div>
-      ${pesanan.payment_status ? `<div class="alert ${pesanan.payment_status === 'Lunas' ? 'alert-success' : pesanan.payment_status === 'Ditolak' ? 'alert-danger' : 'alert-warning'}">Pembayaran: <strong>${pesanan.payment_status}</strong></div>` : ''}
-      ${pesanan.status === 'Dibatalkan' ? '<div class="alert alert-danger">Pesanan dibatalkan. Bukti Pembayaran tidak dapat diverifikasi.</div>' : ''}
+      ${pesanan.payment_status ? `<div class="alert ${pesanan.payment_status === 'Lunas' ? 'alert-success' : pesanan.payment_status === 'Ditolak' ? 'alert-danger' : 'alert-warning'}">Pembayaran: <strong>${escapeHTML(pesanan.payment_status)}</strong>${pesanan.payment_status === 'Ditolak' ? `<div class="mt-1">Alasan: ${escapeHTML(pesanan.payment_reason || 'Belum tersedia dari sistem.')}</div>` : ''}</div>` : ''}
+      ${pesanan.status === 'Dibatalkan' ? '<div class="alert alert-danger">Pesanan dibatalkan. Periksa status pembayaran untuk informasi lebih lanjut.</div>' : ''}
       <ol class="order-progress" aria-label="Progres pesanan">
         ${tahap.map((label, index) => `<li class="${index <= statusIndex ? 'is-active' : ''} ${index < statusIndex ? 'is-complete' : ''}">
           <span class="order-progress-number">${index < statusIndex ? '<i class="bi bi-check-lg"></i>' : index + 1}</span>
@@ -90,7 +196,7 @@ const P = {
       </ol>
       <div class="order-summary box3d">
         <div class="order-items">
-          ${pesanan.items.map(item => `<div class="order-item"><span>${item.nama}</span><span class="order-quantity">${item.qty}x</span><span class="order-item-price">${rp(Number(item.harga || 0) * item.qty)}</span></div>`).join('')}
+          ${pesanan.items.map(item => `<div class="order-item"><span>${escapeHTML(item.nama)}</span><span class="order-quantity">${item.qty}x</span><span class="order-item-price">${rp(Number(item.harga || 0) * item.qty)}</span></div>`).join('')}
         </div>
         <div class="order-totals">
           <div><span>Total Harga</span><span>${rp(subtotal)}</span></div>
@@ -98,13 +204,60 @@ const P = {
           <div class="order-grand-total"><span>Total Pembayaran</span><span>${rp(pesanan.total)}</span></div>
         </div>
       </div>
-      ${delivery ? '' : `<div class="box3d p-3 p-md-4 mt-3">${pickupLocation()}</div>`}
+      ${delivery
+        ? `<div class="order-delivery-address box3d"><h6 class="text-maroon">Alamat Pengantaran</h6><p class="mb-0">${escapeHTML(pesanan.alamat || 'Alamat belum tersedia.')}</p></div>`
+        : `<div class="box3d p-3 p-md-4 mt-3">${pickupLocation()}</div>`}
+      <form class="box3d customer-feedback mt-3" onsubmit="saveCustomerFeedback(event, '${escapeHTML(pesanan.id)}')">
+        <h6 class="text-maroon"><i class="bi bi-chat-left-text me-1"></i>Kritik, saran, atau komplain</h6>
+        <label for="feedback-${escapeHTML(pesanan.id)}" class="form-label small">Ceritakan tanggapan Anda mengenai pesanan ini.</label>
+        <textarea id="feedback-${escapeHTML(pesanan.id)}" class="form-control" rows="4" maxlength="2000" placeholder="Tulis komentar..." required>${escapeHTML(feedbackComment)}</textarea>
+        <label for="feedbackMedia-${escapeHTML(pesanan.id)}" class="form-label small mt-3">Foto atau video pendukung (opsional)</label>
+        <input id="feedbackMedia-${escapeHTML(pesanan.id)}" class="form-control" type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime" onchange="previewCustomerFeedbackMedia(event)" aria-describedby="feedbackMediaHelp-${escapeHTML(pesanan.id)}">
+        <small id="feedbackMediaHelp-${escapeHTML(pesanan.id)}" class="form-text text-muted">Foto JPG/PNG/WebP maks. 1 MB; video MP4/WebM/MOV maks. 2 MB.</small>
+        <img id="feedbackMediaImage-${escapeHTML(pesanan.id)}" class="customer-feedback-preview" src="${feedbackIsVideo ? '' : escapeHTML(feedbackMedia)}" alt="Pratinjau foto pendukung" ${feedbackMedia && !feedbackIsVideo ? '' : 'hidden'}>
+        <video id="feedbackMediaVideo-${escapeHTML(pesanan.id)}" class="customer-feedback-preview" src="${feedbackIsVideo ? escapeHTML(feedbackMedia) : ''}" controls playsinline ${feedbackIsVideo ? '' : 'hidden'}></video>
+        <div class="customer-feedback-note">Draf komentar dan media tersimpan di perangkat ini, belum terkirim ke admin.</div>
+        <button type="submit" class="btn btn-outline-maroon btn-sm mt-2">Simpan draf komentar</button>
+      </form>
       <div class="order-aftercare">
         <span class="text-muted small">Status: <strong>${statusLabel}</strong> · Pesanan #${pesanan.id}</span>
         <a href="#/menu" class="btn btn-outline-maroon btn-sm">Kembali ke Menu</a>
       </div>
     </section>`;
   },
+
+  notifikasi: () => !user || user.role !== 'customer'
+    ? `<div class="box3d p-5 text-center"><h5>Masuk sebagai pelanggan untuk melihat notifikasi.</h5><a href="#/login" class="btn btn-maroon mt-2">Masuk</a></div>`
+    : `<section class="customer-notifications-page">
+        <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap mb-3">
+          <div><h4 class="mb-1">Notifikasi</h4><p class="text-muted small mb-0">Pembaruan status pembayaran dan pesanan Anda.</p></div>
+          <div class="d-flex gap-2 flex-wrap">
+            <button type="button" class="btn btn-outline-maroon btn-sm" onclick="refreshCustomerNotifications()"><i class="bi bi-arrow-clockwise"></i> Perbarui</button>
+            ${unreadCustomerNotificationCount() ? '<button type="button" class="btn btn-outline-maroon btn-sm" onclick="markNotificationsRead()">Tandai semua dibaca</button>' : ''}
+          </div>
+        </div>
+        ${customerNotificationItems.length ? `<div class="notification-list">
+          ${customerNotificationItems.map(item => {
+            const content = `<span class="notification-item-icon"><i class="bi ${item.icon}"></i></span>
+              <span class="customer-notification-copy">
+                <strong>${escapeHTML(item.title)}</strong>
+                <span>${escapeHTML(item.message)}</span>
+                <small>${item.type === 'demo' ? 'Contoh notifikasi · Simulasi' : `Pesanan #${escapeHTML(item.id)}${item.createdAt ? ` · ${escapeHTML(item.createdAt)}` : ''}`}</small>
+              </span>
+              <i class="bi bi-chevron-right notification-chevron" aria-hidden="true"></i>`;
+            const classes = `customer-notification-item box3d ${notificationRead.has(item.key) ? '' : 'is-unread'}`;
+            return item.type === 'demo'
+              ? `<article class="${classes}">${content}</article>`
+              : `<a class="${classes}" href="#/pesanan/${encodeURIComponent(item.id)}">${content}</a>`;
+          }).join('')}
+        </div>` : '<div class="box3d p-4 text-center text-muted">Belum ada pembaruan pesanan.</div>'}
+        <div class="notification-integrations box3d mt-4">
+          <h6 class="text-maroon mb-1">Saluran informasi lainnya</h6>
+          <p class="mb-0"><i class="bi bi-calendar-event me-1"></i>Pengingat PO di atas hanya simulasi; jadwal aktual belum terhubung.</p>
+          <p class="mb-0"><i class="bi bi-phone me-1"></i>Push notification belum terhubung.</p>
+          <p class="mb-0"><i class="bi bi-whatsapp me-1"></i>WhatsApp belum terhubung.</p>
+        </div>
+      </section>`,
 
   riwayat: () => !user ? `<div class="box3d p-5 text-center"><h5>Masuk untuk melihat riwayat pesanan.</h5><a href="#/login" class="btn btn-maroon mt-2">Masuk</a></div>` :
     `<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3"><h4>Riwayat Pesanan</h4><a href="#/menu" class="btn btn-outline-maroon btn-sm">Belanja lagi</a></div>
