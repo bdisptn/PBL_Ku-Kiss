@@ -31,8 +31,12 @@ async function order() {
   const proofInput = $('#bk');
   if (!items.length) return flash('Pilih produk terlebih dahulu.');
   if (!proofInput?.files?.length) return flash('Unggah bukti pembayaran terlebih dahulu.');
-  const address = mode === 'Pengantaran' ? val('alamat').trim() : '';
-  if (mode === 'Pengantaran' && !address) return flash('Alamat pengantaran wajib diisi.');
+  if (mode === 'Pengantaran' && deliveryArea === '__outside__') return flash('Layanan pengantaran belum tersedia untuk wilayah tersebut.');
+  if (mode === 'Pengantaran' && !DELIVERY_AREAS.includes(deliveryArea)) return flash('Pilih wilayah pengantaran yang tersedia.');
+  const streetAddress = mode === 'Pengantaran' ? deliveryAddress.trim() : '';
+  if (mode === 'Pengantaran' && !streetAddress) return flash('Alamat pengantaran wajib diisi.');
+  if (streetAddress.length > 900) return flash('Alamat pengantaran terlalu panjang.');
+  const address = mode === 'Pengantaran' ? `Wilayah: ${deliveryArea}\n${streetAddress}` : '';
   const button = $('button[onclick="order()"]');
   if (button?.disabled) return;
   if (button) button.disabled = true;
@@ -46,13 +50,100 @@ async function order() {
     const result = await api('order-create', { method: 'POST', body: form });
     cart = cart.filter(item => !item.pick);
     save('cart', cart);
+    deliveryArea = '';
+    deliveryAddress = '';
     bukti = false;
     ordersLoaded = false;
+    customerNotificationItems = [];
+    customerNotificationsLoaded = false;
+    customerNotificationsRequest = null;
     adminDataLoaded = false;
     flash(result.message);
     location.hash = '#/pesanan/' + result.order_id;
   } catch (error) {
     flash(error.message);
+    if (button) button.disabled = false;
+  }
+}
+const CUSTOMER_FEEDBACK_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const CUSTOMER_FEEDBACK_VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime'];
+function previewCustomerFeedbackMedia(event) {
+  const input = event.target;
+  const file = input.files[0];
+  if (!file) return;
+  const isImage = CUSTOMER_FEEDBACK_IMAGE_TYPES.includes(file.type);
+  const isVideo = CUSTOMER_FEEDBACK_VIDEO_TYPES.includes(file.type);
+  const maxSize = isVideo ? 2 * 1024 * 1024 : 1024 * 1024;
+  if ((!isImage && !isVideo) || file.size > maxSize) {
+    input.value = '';
+    return flash('Pilih foto JPG/PNG/WebP (maks. 1 MB) atau video MP4/WebM/MOV (maks. 2 MB).');
+  }
+  const reader = new FileReader();
+  reader.onload = () => {
+    if (isVideo) {
+      const preview = $('#' + input.id.replace('feedbackMedia-', 'feedbackMediaVideo-'));
+      preview.src = reader.result;
+      preview.hidden = false;
+      preview.load();
+      preview.load();
+      const image = $('#' + input.id.replace('feedbackMedia-', 'feedbackMediaImage-'));
+      image.hidden = true;
+      image.removeAttribute('src');
+    } else {
+      const preview = $('#' + input.id.replace('feedbackMedia-', 'feedbackMediaImage-'));
+      preview.src = reader.result;
+      preview.hidden = false;
+      const video = $('#' + input.id.replace('feedbackMedia-', 'feedbackMediaVideo-'));
+      video.hidden = true;
+      video.removeAttribute('src');
+      video.load();
+    }
+  };
+  reader.onerror = () => flash('File gagal dibaca. Coba pilih file lain.');
+  reader.readAsDataURL(file);
+}
+function readCustomerFeedbackMedia(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error('File gagal dibaca. Coba pilih file lain.'));
+    reader.readAsDataURL(file);
+  });
+}
+async function saveCustomerFeedback(event, orderId) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const comment = form.querySelector('textarea').value.trim();
+  if (!comment) return flash('Tulis komentar terlebih dahulu.');
+  const button = form.querySelector('[type="submit"]');
+  const mediaInput = form.querySelector('input[type="file"]');
+  const previousDraft = customerFeedbackDrafts[orderId];
+  const previousMedia = typeof previousDraft === 'object' && previousDraft
+    ? previousDraft.media || previousDraft.photo || ''
+    : '';
+  if (button) button.disabled = true;
+  try {
+    const file = mediaInput.files[0];
+    if (file) {
+      const isImage = CUSTOMER_FEEDBACK_IMAGE_TYPES.includes(file.type);
+      const isVideo = CUSTOMER_FEEDBACK_VIDEO_TYPES.includes(file.type);
+      const maxSize = isVideo ? 2 * 1024 * 1024 : 1024 * 1024;
+      if ((!isImage && !isVideo) || file.size > maxSize) {
+        return flash('Pilih foto JPG/PNG/WebP (maks. 1 MB) atau video MP4/WebM/MOV (maks. 2 MB).');
+      }
+    }
+    const media = file ? await readCustomerFeedbackMedia(file) : previousMedia;
+    customerFeedbackDrafts[orderId] = { comment, media };
+    try {
+      save('customerFeedbackDrafts', customerFeedbackDrafts);
+    } catch (error) {
+      customerFeedbackDrafts[orderId] = previousDraft;
+      throw new Error('Draf tidak dapat disimpan di browser. Kosongkan ruang penyimpanan lalu coba lagi.');
+    }
+    flash('Draf komentar dan foto tersimpan di perangkat ini. Belum terkirim ke admin.');
+  } catch (error) {
+    flash(error.message);
+  } finally {
     if (button) button.disabled = false;
   }
 }
@@ -64,13 +155,16 @@ async function doLogin(event) {
     const result = await api('login', { method: 'POST', body: { email: val('em'), password: val('pw') } });
     csrf = result.csrf;
     user = mapUser(result.user);
+    customerNotificationItems = [];
+    customerNotificationsLoaded = false;
+    customerNotificationsRequest = null;
     adminDataLoaded = false;
     ordersLoaded = false;
     location.hash = user.role === 'admin' ? '#/admin/dashboard' : '#/';
     if (location.hash === (user.role === 'admin' ? '#/admin/dashboard' : '#/')) await render();
   } catch (error) {
     flash(error.message);
-    button.disabled = false;
+    button.disabled = false;  
   }
 }
 async function doRegister(event) {
@@ -83,6 +177,9 @@ async function doRegister(event) {
     } });
     user = mapUser(result.user);
     csrf = result.csrf;
+    customerNotificationItems = [];
+    customerNotificationsLoaded = false;
+    customerNotificationsRequest = null;
     ordersLoaded = false;
     flash('Pendaftaran berhasil.');
     location.hash = '#/';
@@ -97,6 +194,9 @@ async function logout() {
     csrf = '';
     user = null;
     orders = [];
+    customerNotificationItems = [];
+    customerNotificationsLoaded = false;
+    customerNotificationsRequest = null;
     adminDataLoaded = false;
     ordersLoaded = false;
     await loadBootstrap();
