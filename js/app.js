@@ -25,6 +25,15 @@ async function render() {
       }
       if (sequence !== renderSequence) return;
     }
+    const adminPage = a || 'dashboard';
+    if (['penjualan', 'feedback', 'notifikasi'].includes(adminPage)) {
+      try {
+        await markAdminPageNotificationsRead(adminPage);
+      } catch (error) {
+        flash(`Notifikasi gagal diperbarui: ${error.message}`);
+      }
+      if (sequence !== renderSequence) return;
+    }
     const halamanAdmin = a === 'laporan' && b ? reportDetail(b) : (A[a] || A.dashboard)();
     root.innerHTML = adminLayout(a || 'dashboard', halamanAdmin);
     startAdminNotificationPolling();
@@ -39,6 +48,19 @@ async function render() {
       } catch (error) {
         if (sequence === renderSequence) root.innerHTML = site(`<div class="box3d p-5 text-center">${error.message}<button class="btn btn-maroon d-block mx-auto mt-3" onclick="render()">Coba lagi</button></div>`);
         return;
+      }
+      if (sequence !== renderSequence) return;
+    }
+    if (r === 'notifikasi' && user?.role === 'customer' && unreadCustomerNotificationCount()) {
+      try {
+        await api('notification-read-all', { method: 'POST', body: {} });
+        const readAt = new Date().toISOString();
+        customerNotificationItems = customerNotificationItems.map(item => ({
+          ...item,
+          read_at: item.read_at || readAt
+        }));
+      } catch (error) {
+        flash(`Notifikasi gagal diperbarui: ${error.message}`);
       }
       if (sequence !== renderSequence) return;
     }
@@ -61,6 +83,7 @@ async function render() {
         if (sequence === renderSequence) flash(`Notifikasi gagal dimuat: ${error.message}`);
       });
     }
+    if (user?.role === 'customer') startCustomerNotificationPolling();
 
     if (r === 'about' && $('#about')) {
       $('#about').scrollIntoView();

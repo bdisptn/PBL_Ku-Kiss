@@ -17,17 +17,20 @@ Skrip frontend saat ini menggunakan skrip browser klasik, bukan ES modules. Pert
 ## Fitur
 - Pelanggan dapat mendaftar/login, melihat katalog, berbelanja, mengunggah bukti pembayaran, serta melihat riwayat dan progres pesanan.
 - Admin dapat mengelola produk, batch PO, dan pesanan; melihat ringkasan pemasukan, pembayaran yang menunggu verifikasi, serta pengeluaran bulan ini; melihat laporan pemasukan/pengeluaran bulanan; dan melihat pemasukan lunas pada daftar Batch PO.
-- Dashboard admin menyediakan notifikasi pesanan/feedback, daftar pesanan, alasan penolakan pembayaran, bukti foto sebelum/sesudah pengiriman, halaman feedback, pencarian bahan baku, dan laporan. Form bahan baku hanya memuat nama serta status tersedia/tidak tersedia.
-- Data akun, katalog, pesanan, dan laporan tersimpan melalui API PHP ke database; keranjang dan status baca notifikasi disimpan di browser. Data bahan baku serta alasan penolakan yang belum dikirim/diterima oleh API tetap lokal di browser admin. Unggah bukti, pengiriman feedback, daftar feedback admin, dan pembatalan pelanggan memerlukan endpoint backend; frontend menampilkan kegagalan API dan tidak menganggap data lokal sebagai berhasil terkirim.
-- Pemasukan pada daftar Batch PO diestimasi berdasarkan kecocokan tanggal pesanan dengan rentang tanggal batch; API saat ini belum mengirimkan relasi batch pada data pesanan, sehingga laporan historis memerlukan integrasi backend agar akurat. Status bahan baku hanya menandai ketersediaan dan tidak mengubah stok saat catatan pengeluaran dibuat.
+- Dashboard admin menyediakan notifikasi pesanan masuk, pembatalan, dan kritik/saran; daftar pesanan, alasan penolakan pembayaran, bukti foto sebelum/sesudah pengiriman, halaman feedback beserta lampiran, pengelolaan bahan baku, dan laporan. Bahan baku serta catatan pengeluaran tersimpan di database; pengeluaran menyimpan relasi bahan baku dan snapshot namanya.
+- Data akun, katalog, pesanan, feedback, lampiran privat, bahan baku, pengeluaran, serta status baca notifikasi tersimpan melalui API PHP ke database. Notifikasi in-app dibatasi pada aplikasi (tanpa Web Push/WhatsApp); keranjang dan draf feedback tetap disimpan di browser.
+- Pemasukan Batch PO dihitung dari relasi batch pada pesanan, bukan perkiraan tanggal. Status bahan baku menandai ketersediaan dan tidak mengubah jumlah stok otomatis saat pengeluaran dibuat.
+- Ongkir pengantaran ditentukan berdasarkan wilayah yang dipilih, dengan tarif tersimpan di tabel `wilayah_ongkir`; backend memakai tarif database saat menghitung total pesanan.
 
-### Integrasi backend untuk revisi frontend
-Bagian ini adalah kontrak yang diharapkan frontend; perubahan endpoint/database dikerjakan terpisah di backend.
-- `admin-data` perlu mengirim `feedback` (array berisi `id`, `customer_name`, `order_id`, `message`, dan `created_at`) agar notifikasi serta rekap feedback admin terisi.
-- `orders`/`admin-data.orders` perlu mengirim `scheduled_date` atau `cancellation_deadline` untuk menampilkan batas pembatalan H-3. Frontend menolak pembatalan tanpa jadwal, tetapi backend tetap wajib memvalidasi H-3 secara otoritatif pada endpoint `order-cancel` (`POST` JSON `{ "id": <order_id> }`).
-- `feedback-create` menerima `POST` multipart (`message`, opsional `order_id` dan `attachment`) untuk form feedback per pesanan, atau `POST` JSON (`message`, opsional `order_id`) untuk feedback umum.
-- `order-evidence-save` menerima `POST` multipart (`order_id`, `stage` bernilai `before`/`after`, dan `image`). Respons `admin-data.orders` perlu mengembalikan `evidence_before_path`/`evidence_after_path`; `order-evidence` (`GET` dengan `id` dan `stage`) perlu menyajikan gambar yang diizinkan untuk dilihat pelanggan terkait.
-- Agar alasan penolakan tersedia konsisten untuk pelanggan, respons `orders` dan `admin-data.orders` perlu mengirim `payment_reason` atau `rejection_reason`; penyimpanan lokal admin hanya berlaku pada browser yang melakukan penolakan.
+- `admin-data` mengirim feedback, notifikasi, bahan baku, pengeluaran, dan relasi batch pesanan untuk tampilan admin. Feedback umum menerima JSON; feedback per pesanan dapat menyertakan lampiran multipart. Lampiran feedback hanya dapat diambil admin melalui endpoint terautentikasi.
+- `ingredient-save` dan `ingredient-delete` mengelola bahan baku di database. `expense-save` memerlukan `ingredient_id`; nama bahan pada catatan pengeluaran disimpan sebagai snapshot, dan relasi bahan dapat dilepas saat bahan dihapus.
+- Notifikasi pelanggan/admin disimpan di `notifikasi_aplikasi`; endpoint `notifications`, `notification-read`, `notification-read-all`, dan `notification-read-section` mengambil serta memperbarui status bacanya. Membuka halaman Pesanan/Feedback admin otomatis menandai notifikasi terkait sudah dibaca tanpa mengubah status pesanan; membuka halaman Notifikasi menandai semua notifikasi sebagai dibaca. Semua pelanggan menerima notifikasi ketika batch PO dibuka atau ditutup; notifikasi batch dapat dibuka untuk menuju menu, dan membuka halaman Notifikasi pelanggan juga menandainya sudah dibaca.
+- `orders` dan `admin-data.orders` mengirim `scheduled_date`, yang memakai tanggal pengambilan pesanan jika tersedia atau tanggal tutup batch PO. Endpoint `order-cancel` memvalidasi batas H-3 di server.
+- Bukti sebelum/sesudah pesanan disimpan lewat `order-evidence-save` dan hanya dapat dilihat admin atau pelanggan pemilik pesanan melalui `order-evidence`.
+- Alasan penolakan pembayaran disimpan pada pesanan dan dikirim sebagai `payment_reason` pada respons API.
+- Alasan pembatalan pelanggan wajib dipilih atau ditulis, disimpan pada pesanan, dan ditampilkan kepada admin serta pelanggan.
+- Jalankan ulang `database/schema.sql` setelah pembaruan untuk menambahkan tabel bahan baku/notifikasi, relasi bahan pada pengeluaran, serta kolom/indeks yang diperlukan pada database yang sudah ada.
+- Untuk menambahkan tabel tarif ongkir dan mengisi tarif awal, jalankan `database/schema.sql` lalu `database/seed.sql`. Perubahan nominal selanjutnya dapat dilakukan pada tabel `wilayah_ongkir`.
 
 ## Persyaratan
 - PHP 8.1 atau lebih baru dengan ekstensi PDO PostgreSQL (`pdo_pgsql`), `fileinfo`, dan `mbstring`.
@@ -35,7 +38,7 @@ Bagian ini adalah kontrak yang diharapkan frontend; perubahan endpoint/database 
 - Koneksi internet untuk Bootstrap, Bootstrap Icons, Google Fonts, dan Chart.js CDN.
 
 ## Skema database
-Backend menggunakan skema PostgreSQL KU-KISS yang sudah ada: `admin`, `pelanggan`, `kategori`, `produk`, `batch_po`, `pesanan`, `detail_pesanan`, `pengeluaran`, `login_percobaan`, dan `notifikasi`. `database/schema.sql` membuat tabel yang belum ada, memperbarui batasan status pembayaran/pesanan, serta menghapus kolom stok produk yang sudah tidak digunakan.
+Backend menggunakan skema PostgreSQL KU-KISS: `admin`, `pelanggan`, `kategori`, `produk`, `batch_po`, `wilayah_ongkir`, `pesanan`, `detail_pesanan`, `feedback`, `bahan_baku`, `pengeluaran`, `notifikasi_aplikasi`, `login_percobaan`, dan `notifikasi`. `database/schema.sql` membuat tabel yang belum ada, memperbarui batasan status pembayaran/pesanan, serta menghapus kolom stok produk yang sudah tidak digunakan.
 
 ### Setup lokal melalui pgAdmin (Windows)
 Jalankan pgAdmin dan hubungkan ke server PostgreSQL lokal. Buka **Query Tool** pada database `postgres`, jalankan perintah pertama, lalu jalankan perintah kedua secara terpisah. Ganti password contoh dengan password kuat dan simpan karena akan dipakai di konfigurasi aplikasi:

@@ -3,6 +3,20 @@ INSERT INTO kategori (kode_kategori, nama_kategori) VALUES
   ('BRO', 'Browniez')
 ON CONFLICT (kode_kategori) DO NOTHING;
 
+INSERT INTO wilayah_ongkir (nama_wilayah, ongkir) VALUES
+  ('Tunggulwulung', 0),
+  ('Dinoyo', 3000),
+  ('Jatimulyo', 3000),
+  ('Ketawanggede', 3000),
+  ('Merjosari', 5000),
+  ('Mojolangu', 5000),
+  ('Tlogomas', 5000),
+  ('Lowokwaru', 5000),
+  ('Oro-Oro Dowo', 5000),
+  ('Klojen', 5000)
+ON CONFLICT (nama_wilayah) DO UPDATE
+SET ongkir = EXCLUDED.ongkir, aktif = TRUE;
+
 INSERT INTO produk (kode_produk, nama_produk, deskripsi, harga, id_kategori, gambar) VALUES
   ('COO-MAT-001', 'Cookies Varian Matcha Cookies', 'Perpaduan rasa manis dan sedikit hint pahit khas matcha premium, berpadu sempurna dengan topping almond dan white chocolate di setiap gigitannya.', 15000, (SELECT id_kategori FROM kategori WHERE kode_kategori = 'COO'), 'matcha.png'),
   ('COO-ORI-001', 'Cookies Varian Original', 'Classic soft-baked cookies dengan taburan choco chips melimpah, menghasilkan tekstur renyah di luar namun lumer dan lembut di dalam.', 15000, (SELECT id_kategori FROM kategori WHERE kode_kategori = 'COO'), 'biscoff.png'),

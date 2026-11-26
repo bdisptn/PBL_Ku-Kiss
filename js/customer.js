@@ -1,7 +1,7 @@
 // 2. KOMPONEN TAMPILAN PELANGGAN (navbar, footer, pencarian)
 // ============================================================
 const unreadCustomerNotificationCount = () =>
-  customerNotificationItems.filter(item => !notificationRead.has(item.key)).length;
+  customerNotificationItems.filter(item => !item.read_at).length;
 const nav = () => `<nav class="navbar navbar-expand-lg bg-white nav-3d sticky-top"><div class="container">
 <a class="navbar-brand brand" href="#/"><img src="img/logo.png" class="logo">KU-KISS</a>
 <button class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#nv"><span class="navbar-toggler-icon"></span></button>
@@ -19,10 +19,6 @@ const foot = () => `<footer class="py-4"><div class="container row mx-auto g-3">
 <div class="col-md-4"><h6 class="text-maroon">Informasi</h6><div class="text-muted small lh-lg"><i class="bi bi-telephone"></i> 0816 5442 005<br><i class="bi bi-envelope"></i> kukiss@gmail.com<br><i class="bi bi-instagram"></i> houseof.kukiss<br><i class="bi bi-facebook"></i> kukiss.official</div></div></div></footer>`;
 const PICKUP_ADDRESS = 'Jl. Arumba No.13, Tunggulwulung, Kec. Lowokwaru, Kota Malang, Jawa Timur 65143';
 const PICKUP_MAP_URL = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(PICKUP_ADDRESS)}`;
-const DELIVERY_AREAS = [
-  'Dinoyo', 'Jatimulyo', 'Ketawanggede', 'Lowokwaru', 'Merjosari',
-  'Mojolangu', 'Tlogomas', 'Tunggulwulung', 'Oro-Oro Dowo', 'Klojen'
-];
 function orderCancellationEligibility(order) {
   const scheduledValue = order.cancellation_deadline || order.scheduled_date;
   if (!scheduledValue) return { available: false, allowed: false, deadline: null };
@@ -46,37 +42,59 @@ const customerOrderEvidenceUrl = (id, stage) =>
 function loadCustomerNotifications() {
   if (customerNotificationsLoaded) return Promise.resolve();
   if (customerNotificationsRequest) return customerNotificationsRequest;
-  customerNotificationsRequest = api('orders').then(data => {
-    orders = data.orders.map(mapOrder);
-    ordersLoaded = true;
-    customerNotificationItems = orders.map(order => ({
-      id: order.id,
-      key: `${order.id}:${order.payment_status || ''}:${order.status || ''}`,
-      title: order.payment_status === 'Ditolak' ? 'Pembayaran perlu diperiksa' : 'Pembaruan pesanan',
-      message: order.payment_status === 'Ditolak'
-        ? (order.payment_reason || 'Pembayaran ditolak. Alasan belum tersedia dari sistem.')
-        : `${order.status || order.payment_status || 'Status diperbarui'}${order.alamat ? ` · ${order.alamat}` : ''}`,
-      icon: order.payment_status === 'Ditolak' ? 'bi-exclamation-circle' : 'bi-receipt',
-      createdAt: order.tgl
+  customerNotificationsRequest = api('notifications').then(data => {
+    customerNotificationItems = (data.notifications || []).map(item => ({
+      ...item,
+      id: Number(item.order_id || 0),
+      notificationId: Number(item.id),
+      createdAt: item.created_at,
+      icon: item.type === 'payment_rejected' ? 'bi-exclamation-circle'
+        : item.type === 'order_cancelled' ? 'bi-x-circle'
+          : item.type.startsWith('batch_') ? 'bi-calendar-check' : 'bi-receipt'
     }));
-    customerNotificationItems.push({
-      id: 'batch-po-demo',
-      type: 'demo',
-      key: 'batch-po-demo:opening-in-3-days',
-      title: 'Contoh pengingat pembukaan batch PO',
-      message: 'DEMO: Batch PO akan dibuka dalam 3 hari. Ini simulasi, bukan jadwal sebenarnya.',
-      icon: 'bi-calendar-event'
-    });
     customerNotificationsLoaded = true;
   }).finally(() => {
     customerNotificationsRequest = null;
   });
   return customerNotificationsRequest;
 }
-function markNotificationsRead() {
-  customerNotificationItems.forEach(item => notificationRead.add(item.key));
-  save('customerNotificationRead', [...notificationRead]);
-  render();
+let customerNotificationTimer = null;
+let customerNotificationRefreshInFlight = false;
+function startCustomerNotificationPolling() {
+  if (customerNotificationTimer) return;
+  customerNotificationTimer = setInterval(async () => {
+    if (user?.role !== 'customer' || customerNotificationRefreshInFlight) return;
+    customerNotificationRefreshInFlight = true;
+    customerNotificationsLoaded = false;
+    try {
+      await loadCustomerNotifications();
+      if (user?.role === 'customer') await render();
+    } catch (error) {
+      flash(`Notifikasi gagal diperbarui: ${error.message}`);
+    } finally {
+      customerNotificationRefreshInFlight = false;
+    }
+  }, 30000);
+}
+async function openCustomerNotification(notificationId, orderId) {
+  try {
+    await api('notification-read', { method: 'POST', body: { id: notificationId } });
+    customerNotificationsLoaded = false;
+    await loadCustomerNotifications();
+    location.hash = orderId ? `#/pesanan/${encodeURIComponent(orderId)}` : '#/menu';
+  } catch (error) {
+    flash(`Notifikasi gagal diperbarui: ${error.message}`);
+  }
+}
+async function markNotificationsRead() {
+  try {
+    await api('notification-read-all', { method: 'POST', body: {} });
+    customerNotificationsLoaded = false;
+    await loadCustomerNotifications();
+    await render();
+  } catch (error) {
+    flash(`Notifikasi gagal diperbarui: ${error.message}`);
+  }
 }
 async function refreshCustomerNotifications() {
   customerNotificationsLoaded = false;
@@ -134,9 +152,10 @@ const P = {
   checkout: () => {
     const items = cart.filter(c => c.pick);
     if (!items.length) return P.keranjang();
-    const ongkir = mode === 'Pengantaran' ? ship : 0;
-    const areaOptions = DELIVERY_AREAS.map(area =>
-      `<option value="${escapeHTML(area)}" ${deliveryArea === area ? 'selected' : ''}>${escapeHTML(area)}</option>`
+    const selectedArea = deliveryAreas.find(area => String(area.id) === String(deliveryArea));
+    const ongkir = mode === 'Pengantaran' ? selectedArea?.shipping_fee || 0 : 0;
+    const areaOptions = deliveryAreas.map(area =>
+      `<option value="${area.id}" ${String(deliveryArea) === String(area.id) ? 'selected' : ''}>${escapeHTML(area.name)}</option>`
     ).join('');
     return `<div class="box3d p-4 mx-auto checkout-card">
       <h5 class="text-maroon">Checkout</h5><h6>Ringkasan Pemesanan</h6>
@@ -155,19 +174,16 @@ const P = {
       <div class="sec">
         <h6 class="text-maroon">Metode pengambilan</h6>${fulfillmentOptions()}
         ${mode === 'Pengantaran' ? `
-          <label for="deliveryArea" class="form-label fw-medium">Wilayah pengantaran</label>
+          <label for="deliveryArea" class="form-label fw-medium delivery-area-label">Wilayah pengantaran</label>
           <select id="deliveryArea" class="form-select mb-2" onchange="deliveryArea=this.value;render()" required>
             <option value="">Pilih wilayah</option>${areaOptions}
             <option value="__outside__" ${deliveryArea === '__outside__' ? 'selected' : ''}>Di luar wilayah layanan</option>
           </select>
+          ${deliveryAreas.length ? '' : '<div class="alert alert-warning py-2">Tarif wilayah belum tersedia. Silakan hubungi admin.</div>'}
           ${deliveryArea === '__outside__' ? '<div class="alert alert-warning py-2">Layanan pengantaran belum tersedia untuk wilayah tersebut. Pilih Pick Up atau wilayah layanan.</div>' : ''}
           <label for="alamat" class="form-label fw-medium mt-2">Alamat lengkap</label>
           <textarea id="alamat" class="form-control" rows="3" maxlength="900" placeholder="Nama jalan, nomor rumah, RT/RW, dan patokan" oninput="deliveryAddress=this.value">${escapeHTML(deliveryAddress)}</textarea>
-          <div class="alert alert-info py-2 mt-3 mb-0"><strong>Estimasi ongkir: ${rp(ongkir)}</strong><br><small>Untuk saat ini tarif masih tetap (Hemat Rp3.000 / Standard Rp5.000), belum dihitung otomatis berdasarkan jarak.</small></div>
-          <div class="d-flex gap-2 mt-2">
-            <button type="button" class="btn btn-outline-maroon flex-fill ${ship === 3000 ? 'active' : ''}" aria-pressed="${ship === 3000}" onclick="ship=3000;render()">Hemat · Rp3.000</button>
-            <button type="button" class="btn btn-outline-maroon flex-fill ${ship === 5000 ? 'active' : ''}" aria-pressed="${ship === 5000}" onclick="ship=5000;render()">Standard · Rp5.000</button>
-          </div>` : `<small class="text-muted">Ambil sendiri di lokasi KU-KISS sesuai jadwal PO.</small>${pickupLocation()}`}
+          <div class="alert alert-info py-2 mt-3 mb-0"><strong class="checkout-shipping-fee">Ongkir: ${selectedArea ? rp(ongkir) : 'Pilih wilayah untuk melihat tarif'}</strong>${selectedArea ? `<br><small>Tarif wilayah ${escapeHTML(selectedArea.name)}.</small>` : ''}</div>` : `<small class="text-muted">Ambil sendiri di lokasi KU-KISS sesuai jadwal PO.</small>${pickupLocation()}`}
       </div>
       <div class="sec">
         <div class="d-flex justify-content-between align-items-center gap-2 mb-2"><span class="chip">Detail Pembayaran</span><button type="button" class="btn btn-maroon btn-sm" onclick="showQris()"><i class="bi bi-eye"></i> Lihat Kode QRIS</button></div>
@@ -175,7 +191,7 @@ const P = {
       </div>
       <div class="sec"><label for="bk" class="chip">Upload Bukti Pembayaran</label><input type="file" id="bk" class="form-control mt-2" accept="image/jpeg,image/png,image/webp" onchange="bukti=true;$('#bkl').textContent=this.files[0].name"><small class="form-text text-muted">Format JPG, PNG, atau WebP.</small></div>
       <div class="d-flex justify-content-between my-3 fw-semibold"><span>Total Pembayaran</span><span>${rp(sub() + ongkir)}</span></div>
-      <button class="btn btn-maroon w-100 py-2" onclick="order()" ${deliveryArea === '__outside__' ? 'disabled' : ''}>Buat Pesanan</button>
+      <button class="btn btn-maroon w-100 py-2" onclick="order()" ${mode === 'Pengantaran' && !selectedArea ? 'disabled' : ''}>Buat Pesanan</button>
     </div>`;
   },
 
@@ -217,7 +233,7 @@ const P = {
       ${pesanan.payment_status === 'Ditolak'
         ? `<div class="payment-rejection-reason customer-payment-rejection"><span class="badge text-bg-danger mb-2"><i class="bi bi-exclamation-circle me-1"></i>Pembayaran ditolak</span><strong class="d-block mb-1">Alasan</strong><p class="mb-0">${escapeHTML(pesanan.payment_reason || 'Alasan penolakan belum tersedia. Silakan hubungi admin.')}</p></div>`
         : pesanan.payment_status ? `<div class="alert ${pesanan.payment_status === 'Lunas' ? 'alert-success' : 'alert-warning'}">Pembayaran: <strong>${escapeHTML(pesanan.payment_status)}</strong></div>` : ''}
-      ${pesanan.status === 'Dibatalkan' ? '<div class="alert alert-danger">Pesanan dibatalkan. Periksa status pembayaran untuk informasi lebih lanjut.</div>' : ''}
+      ${pesanan.status === 'Dibatalkan' ? `<div class="alert alert-danger">Pesanan dibatalkan. Periksa status pembayaran untuk informasi lebih lanjut.${pesanan.cancellation_reason ? `<br><strong>Alasan:</strong> ${escapeHTML(pesanan.cancellation_reason)}` : ''}</div>` : ''}
       <ol class="order-progress" aria-label="Progres pesanan">
         ${tahap.map((label, index) => `<li class="${index <= statusIndex ? 'is-active' : ''} ${index < statusIndex ? 'is-complete' : ''}">
           <span class="order-progress-number">${index < statusIndex ? '<i class="bi bi-check-lg"></i>' : index + 1}</span>
@@ -235,11 +251,11 @@ const P = {
         </div>
       </div>
       ${delivery
-        ? `<div class="order-delivery-address box3d"><h6 class="text-maroon">Alamat Pengantaran</h6><p class="mb-0">${escapeHTML(pesanan.alamat || 'Alamat belum tersedia.')}</p></div>`
+        ? `<div class="order-delivery-address box3d"><h6 class="text-maroon">Alamat Pengantaran</h6><p class="mb-0">${escapeHTML(String(pesanan.alamat || 'Alamat belum tersedia.').replace(/^Wilayah:\s*/i, ''))}</p></div>`
         : `<div class="box3d p-3 p-md-4 mt-3">${pickupLocation()}</div>`}
-      ${(pesanan.evidence_before_path || pesanan.evidence_after_path) ? `<section class="box3d order-shipping-evidence mt-3"><h6 class="text-maroon">Bukti proses pesanan</h6><div class="row g-3">
-        ${pesanan.evidence_before_path ? `<div class="col-md-6"><strong class="small">Pesanan disiapkan</strong><img class="customer-feedback-preview mt-2" src="${customerOrderEvidenceUrl(pesanan.id, 'before')}" alt="Bukti pesanan ${pesanan.id} sebelum dikirim" loading="lazy"></div>` : ''}
-        ${pesanan.evidence_after_path ? `<div class="col-md-6"><strong class="small">Pesanan selesai dikirim</strong><img class="customer-feedback-preview mt-2" src="${customerOrderEvidenceUrl(pesanan.id, 'after')}" alt="Bukti pesanan ${pesanan.id} setelah dikirim" loading="lazy"></div>` : ''}
+      ${(pesanan.evidence_before_path || pesanan.evidence_after_path) ? `<section class="box3d order-shipping-evidence mt-3"><h6 class="text-maroon">Bukti proses pesanan</h6><div class="order-evidence-gallery">
+        ${pesanan.evidence_before_path ? `<figure class="order-evidence-card"><figcaption>Pesanan disiapkan</figcaption><img class="order-shipping-evidence-image" src="${customerOrderEvidenceUrl(pesanan.id, 'before')}" alt="Bukti pesanan ${pesanan.id} sebelum dikirim" loading="lazy"></figure>` : ''}
+        ${pesanan.evidence_after_path ? `<figure class="order-evidence-card"><figcaption>Pesanan selesai dikirim</figcaption><img class="order-shipping-evidence-image" src="${customerOrderEvidenceUrl(pesanan.id, 'after')}" alt="Bukti pesanan ${pesanan.id} setelah dikirim" loading="lazy"></figure>` : ''}
       </div></section>` : ''}
       ${cancellationControl}
       <form class="box3d customer-feedback mt-3" onsubmit="saveCustomerFeedback(event, '${escapeHTML(pesanan.id)}')">
@@ -273,24 +289,20 @@ const P = {
         </div>
         ${customerNotificationItems.length ? `<div class="notification-list">
           ${customerNotificationItems.map(item => {
+            const destination = item.id ? `#/pesanan/${encodeURIComponent(item.id)}` : '#/menu';
             const content = `<span class="notification-item-icon"><i class="bi ${item.icon}"></i></span>
               <span class="customer-notification-copy">
                 <strong>${escapeHTML(item.title)}</strong>
                 <span>${escapeHTML(item.message)}</span>
-                <small>${item.type === 'demo' ? 'Contoh notifikasi · Simulasi' : `Pesanan #${escapeHTML(item.id)}${item.createdAt ? ` · ${escapeHTML(formatDateTime(item.createdAt))}` : ''}`}</small>
+                <small>${item.id ? `Pesanan #${escapeHTML(item.id)} · ` : ''}${escapeHTML(formatDateTime(item.createdAt))}</small>
               </span>
               <i class="bi bi-chevron-right notification-chevron" aria-hidden="true"></i>`;
-            const classes = `customer-notification-item box3d ${notificationRead.has(item.key) ? '' : 'is-unread'}`;
-            return item.type === 'demo'
-              ? `<article class="${classes}">${content}</article>`
-              : `<a class="${classes}" href="#/pesanan/${encodeURIComponent(item.id)}">${content}</a>`;
+                const classes = `customer-notification-item box3d ${item.read_at ? '' : 'is-unread'}`;
+                return `<a class="${classes}" href="${destination}" onclick="openCustomerNotification(${item.notificationId},${item.id});return false">${content}</a>`;
           }).join('')}
         </div>` : '<div class="box3d p-4 text-center text-muted">Belum ada pembaruan pesanan.</div>'}
         <div class="notification-integrations box3d mt-4">
-          <h6 class="text-maroon mb-1">Saluran informasi lainnya</h6>
-          <p class="mb-0"><i class="bi bi-calendar-event me-1"></i>Pengingat PO di atas hanya simulasi; jadwal aktual belum terhubung.</p>
-          <p class="mb-0"><i class="bi bi-phone me-1"></i>Push notification belum terhubung.</p>
-          <p class="mb-0"><i class="bi bi-whatsapp me-1"></i>WhatsApp belum terhubung.</p>
+              <p class="mb-0"><i class="bi bi-info-circle me-1"></i>Notifikasi tersimpan di akun Anda dan ditampilkan di aplikasi ini.</p>
         </div>
       </section>`,
 

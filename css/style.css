@@ -15,8 +15,23 @@
 body {
   margin: 0;
   font-family: 'Poppins', sans-serif;
+  font-size: 16px;
   background: var(--cream);
   color: #292929;
+}
+
+button,
+input,
+select,
+textarea,
+.btn,
+.badge,
+.form-control,
+.form-select,
+.table,
+.modal,
+.dropdown-menu {
+  font-family: inherit;
 }
 
 .text-maroon {
@@ -64,7 +79,7 @@ body {
 
 .nav-link {
   color: #333;
-  font-size: 15px;
+  font-size: 16px;
 }
 
 .avatar {
@@ -96,14 +111,14 @@ body {
 .btn-masuk {
   color: #fff;
   background: #1e90ff;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .btn-keluar {
   color: #fff;
   background: #ff5a5a;
   border-radius: 20px;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 /* Pencarian dan area katalog produk */
@@ -335,10 +350,91 @@ footer {
 
 .admin-shell .table-responsive {
   max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .tbl {
+  font-size: 14px;
+}
+
+.admin-card .admin-orders-table {
+  min-width: 1320px;
+  font-size: clamp(13px, 1vw, 14px);
+}
+
+.admin-product-thumbnail {
+  width: 60px;
+  height: 60px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.admin-card .tbl {
+  --bs-table-bg: #fff;
+  --bs-table-striped-bg: #f7efeb;
+  --bs-table-striped-color: #342a2a;
+  border-color: #e6dcd7;
+}
+
+.admin-card .tbl th,
+.admin-card .tbl td {
+  text-align: center;
+}
+
+.admin-card .order-reason-link {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 100%;
+  min-width: 118px;
+  max-width: 150px;
+  margin-top: 6px;
+  padding: 6px 8px;
+  border: 1px solid #d9dfe4;
+  border-radius: 6px;
+  background: #fff;
+  color: var(--maroon);
   font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: center;
+  white-space: normal;
+  cursor: pointer;
+}
+
+.admin-card .order-reason-link:hover,
+.admin-card .order-reason-link:focus-visible {
+  border-color: #b9c1c8;
+  background: #f8f9fa;
+}
+
+.admin-card .admin-orders-table .badge {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.admin-card .admin-orders-table .order-payment-reason-link {
+  font-size: 12px;
+}
+
+.admin-card .tbl:not(.admin-recap-table) tbody td:first-child,
+.admin-card .tbl .admin-row-number {
+  color: var(--maroon);
+  font-weight: 600;
+  text-align: center;
+}
+
+.admin-card .admin-recap-table tbody tr.admin-recap-group-odd > * {
+  --bs-table-bg-type: #f7efeb;
+  --bs-table-color-type: #342a2a;
+}
+
+.admin-card .admin-recap-table tbody tr.admin-recap-group-even > * {
+  --bs-table-bg-type: #fff;
+  --bs-table-color-type: #342a2a;
 }
 
 .tbl thead th,
@@ -352,7 +448,7 @@ footer {
 .pg b {
   padding: 2px 8px;
   border: 1px solid #aaa;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 400;
 }
 
@@ -466,12 +562,25 @@ footer {
   color: #777;
 }
 
-.payment-rejection-reason {
+.order-reason-card {
   padding: 14px;
-  border: 1px solid #f0c4c7;
-  border-left: 4px solid #c62828;
+  border: 1px solid #eadbdd;
+  border-left: 4px solid var(--maroon);
   border-radius: 10px;
+  background: #fffaf8;
+}
+
+.order-reason-card--rejected {
+  border-color: #f0c4c7;
+  border-left-color: #c62828;
   background: #fff7f7;
+}
+
+.order-reason-card p {
+  margin-bottom: 0;
+  font-size: 14px;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
 }
 
 .customer-payment-rejection {
@@ -491,10 +600,56 @@ footer {
   margin: 0 auto;
 }
 
-.order-shipping-evidence img {
-  width: min(100%, 360px);
-  max-height: 320px;
+.order-shipping-evidence {
+  width: min(100%, 980px);
+  margin-inline: auto;
+  padding: clamp(16px, 2.5vw, 28px);
+}
+
+.order-shipping-evidence > h6 {
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.order-evidence-gallery {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: stretch;
+  gap: 18px;
+}
+
+.order-evidence-card {
+  display: flex;
+  flex: 1 1 280px;
+  flex-direction: column;
+  align-items: center;
+  max-width: 380px;
+  min-width: 0;
+  margin: 0;
+  padding: 16px;
+  border: 1px solid #eee6e2;
+  border-radius: 14px;
+  background: #fffdfc;
+}
+
+.order-evidence-card figcaption {
+  margin-bottom: 12px;
+  color: #3d3030;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.order-shipping-evidence-image {
+  display: block;
+  width: min(100%, 280px);
+  height: 320px;
+  border: 1px solid #eee;
+  border-radius: 10px;
+  background: #f7f5f3;
   object-fit: contain;
+  object-position: center;
 }
 
 .admin-card .tbl td {
@@ -716,11 +871,11 @@ footer {
   .order-item {
     grid-template-columns: minmax(0, 1fr) 34px minmax(100px, auto);
     gap: 6px;
-    font-size: 12px;
+    font-size: 14px;
   }
 
   .order-totals > div {
-    font-size: 12px;
+    font-size: 14px;
   }
 
   .order-aftercare {
@@ -813,7 +968,7 @@ footer {
 
 .order-progress-label {
   max-width: 125px;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
   line-height: 1.25;
 }
@@ -971,7 +1126,7 @@ footer {
 .popular-name {
   display: block;
   width: 100%;
-  font-size: clamp(10px, 0.9vw, 13px);
+  font-size: clamp(13px, 0.9vw, 14px);
   line-height: 1.4;
   overflow-wrap: normal;
   word-break: normal;
@@ -1030,7 +1185,7 @@ footer {
   }
 
   .popular-name {
-    font-size: 10px;
+    font-size: 13px;
   }
 
   .profile-static-field {
@@ -1059,7 +1214,7 @@ footer {
   width: 100%;
   min-height: 1.5em;
   white-space: nowrap;
-  font-size: clamp(12px, 1.05vw, 15px);
+  font-size: clamp(14px, 1.05vw, 15px);
   letter-spacing: -0.25px;
 }
 
@@ -1161,7 +1316,7 @@ footer {
   }
 
   .cat-name {
-    font-size: 12px;
+    font-size: 14px;
     letter-spacing: -0.35px;
   }
 
@@ -1512,7 +1667,7 @@ footer {
 .customer-notification-copy small,
 .notification-integrations {
   color: #6d6d6d;
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .notification-chevron {
@@ -1530,10 +1685,17 @@ footer {
   max-width: 680px;
 }
 
+.checkout-shipping-fee {
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
 .fulfillment-options {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+  margin-bottom: 8px;
 }
 
 .fulfillment-option {
@@ -1542,13 +1704,16 @@ footer {
   justify-content: center;
   gap: 8px;
   min-width: 0;
-  min-height: 56px;
-  padding: 10px;
+  min-height: 38px;
+  padding: 6px 12px;
   border: 1px solid #d8d0ce;
   border-radius: 10px;
   background: #fff;
   color: #333;
   font: inherit;
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.5;
   cursor: pointer;
 }
 
@@ -1556,7 +1721,12 @@ footer {
   border-color: var(--maroon);
   background: #fbf3f1;
   color: var(--maroon);
-  font-weight: 600;
+}
+
+.delivery-area-label {
+  display: block;
+  margin-bottom: 8px;
+  text-align: left;
 }
 
 .fulfillment-option:focus-visible {
@@ -1588,6 +1758,11 @@ footer {
 
 .order-delivery-address p {
   overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+
+.order-address-cell {
+  white-space: pre-line;
 }
 
 .customer-feedback textarea {
@@ -1597,7 +1772,7 @@ footer {
 .customer-feedback-note {
   margin-top: 7px;
   color: #6d6d6d;
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .customer-feedback-preview {
@@ -1618,5 +1793,24 @@ footer {
   .checkout-product-image {
     width: 68px;
     height: 68px;
+  }
+
+  .order-shipping-evidence {
+    padding: 16px;
+  }
+
+  .order-evidence-gallery {
+    gap: 12px;
+  }
+
+  .order-evidence-card {
+    flex-basis: 100%;
+    max-width: 340px;
+    padding: 12px;
+  }
+
+  .order-shipping-evidence-image {
+    width: min(100%, 260px);
+    height: min(68vh, 300px);
   }
 }

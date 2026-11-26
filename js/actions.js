@@ -1,9 +1,10 @@
 // 5. AKSI DAN FORM (tambah, edit, hapus, login, checkout, profil)
 // ============================================================
-function modal(t, b, ok) {
+function modal(t, b, ok, confirmLabel = 'Simpan') {
   $('#mt').textContent = t;
   $('#mb').innerHTML = b;
   $('#mok').style.display = ok ? '' : 'none';
+  $('#mok').textContent = confirmLabel;
   $('#mok').onclick = async () => {
     const button = $('#mok');
     button.disabled = true;
@@ -31,20 +32,19 @@ async function order() {
   const proofInput = $('#bk');
   if (!items.length) return flash('Pilih produk terlebih dahulu.');
   if (!proofInput?.files?.length) return flash('Unggah bukti pembayaran terlebih dahulu.');
-  if (mode === 'Pengantaran' && deliveryArea === '__outside__') return flash('Layanan pengantaran belum tersedia untuk wilayah tersebut.');
-  if (mode === 'Pengantaran' && !DELIVERY_AREAS.includes(deliveryArea)) return flash('Pilih wilayah pengantaran yang tersedia.');
+  const selectedArea = deliveryAreas.find(area => String(area.id) === String(deliveryArea));
+  if (mode === 'Pengantaran' && !selectedArea) return flash('Pilih wilayah pengantaran yang tersedia.');
   const streetAddress = mode === 'Pengantaran' ? deliveryAddress.trim() : '';
   if (mode === 'Pengantaran' && !streetAddress) return flash('Alamat pengantaran wajib diisi.');
   if (streetAddress.length > 900) return flash('Alamat pengantaran terlalu panjang.');
-  const address = mode === 'Pengantaran' ? `Wilayah: ${deliveryArea}\n${streetAddress}` : '';
   const button = $('button[onclick="order()"]');
   if (button?.disabled) return;
   if (button) button.disabled = true;
   const form = new FormData();
   form.set('items', JSON.stringify(items.map(item => ({ id: item.id, quantity: item.qty }))));
   form.set('mode', mode === 'Pengantaran' ? 'delivery' : 'pickup');
-  form.set('shipping_type', ship === 5000 ? 'standard' : 'economy');
-  form.set('address', address);
+  form.set('district_id', mode === 'Pengantaran' ? selectedArea.id : '');
+  form.set('address', mode === 'Pengantaran' ? streetAddress : '');
   form.set('proof', proofInput.files[0]);
   try {
     const result = await api('order-create', { method: 'POST', body: form });
@@ -177,16 +177,38 @@ async function cancelCustomerOrder(id) {
   const eligibility = orderCancellationEligibility(order);
   if (!eligibility.available) return flash('Tanggal pengantaran atau pengambilan belum tersedia. Hubungi admin untuk bantuan.');
   if (!eligibility.allowed) return flash(`Pesanan hanya dapat dibatalkan sampai H-3 (${formatDateTime(eligibility.deadline)}).`);
-  if (!confirm(`Batalkan pesanan #${order.id}?`)) return;
-  try {
-    const result = await api('order-cancel', { method: 'POST', body: { id: order.id } });
-    ordersLoaded = false;
-    await loadOrders();
-    flash(result.message || 'Permintaan pembatalan berhasil dikirim.');
-    await render();
-  } catch (error) {
-    flash(error.message);
-  }
+  const paidNotice = order.payment_status === 'Lunas'
+    ? '<div class="alert alert-warning py-2 mt-3 mb-0">Pembayaran sudah lunas. Pembatalan tidak otomatis memproses pengembalian dana; admin akan menindaklanjuti.</div>'
+    : '';
+  modal('Alasan Pembatalan Pesanan',
+    `<p>Pesanan #${order.id}. Pilih alasan pembatalan agar admin dapat menindaklanjuti.</p>
+     <label for="orderCancelReason" class="form-label">Alasan pembatalan <span class="text-danger">*</span></label>
+     <select id="orderCancelReason" class="form-select" onchange="$('#orderCancelCustomReason').hidden=this.value!=='__custom__'">
+       <option value="">Pilih alasan</option>
+       <option value="Pesanan dibuat secara tidak sengaja">Pesanan dibuat secara tidak sengaja</option>
+       <option value="Salah memilih produk atau jumlah">Salah memilih produk atau jumlah</option>
+       <option value="Alamat atau wilayah pengantaran tidak sesuai">Alamat atau wilayah pengantaran tidak sesuai</option>
+       <option value="Jadwal pengantaran atau pengambilan tidak sesuai">Jadwal pengantaran atau pengambilan tidak sesuai</option>
+       <option value="Pesanan terlalu lama diproses">Pesanan terlalu lama diproses</option>
+       <option value="Ingin mengubah pesanan">Ingin mengubah pesanan</option>
+       <option value="__custom__">Alasan lainnya</option>
+     </select>
+     <textarea id="orderCancelCustomReason" class="form-control mt-2" rows="3" maxlength="300" placeholder="Tuliskan alasan pembatalan..." hidden></textarea>
+     ${paidNotice}`,
+    async () => {
+      const selectedReason = val('orderCancelReason');
+      const reason = selectedReason === '__custom__' ? val('orderCancelCustomReason').trim() : selectedReason;
+      if (!reason) {
+        flash('Pilih atau tuliskan alasan pembatalan terlebih dahulu.');
+        return false;
+      }
+      const result = await api('order-cancel', { method: 'POST', body: { id: order.id, reason } });
+      ordersLoaded = false;
+      await loadOrders();
+      flash(result.message || 'Pesanan berhasil dibatalkan.');
+      await render();
+    },
+    'Batalkan Pesanan');
 }
 async function doLogin(event) {
   event.preventDefault();
@@ -452,7 +474,7 @@ function outForm(id) {
     return;
   }
   const selectedIngredient = expense
-    ? ingredients.find(ingredient => ingredient.name === expense.keterangan)
+    ? ingredients.find(ingredient => ingredient.id === expense.ingredientId)
     : null;
   const ingredientOptions = ingredients.map(ingredient =>
     `<option value="${ingredient.id}" ${selectedIngredient?.id === ingredient.id ? 'selected' : ''}>${escapeHTML(ingredient.name)}</option>`
@@ -473,7 +495,7 @@ function outForm(id) {
         return false;
       }
       await api('expense-save', { method: 'POST', body: {
-        id: expense?.id || 0, expense_date: date, description: ingredient.name, amount
+        id: expense?.id || 0, expense_date: date, ingredient_id: ingredient.id, amount
       } });
       adminDataLoaded = false;
       await loadAdminData();
@@ -482,7 +504,7 @@ function outForm(id) {
 async function orderPayment(id, decision) {
   if (decision === 'reject') {
     modal('Tolak Pembayaran',
-      `<p class="mb-2">Pilih atau tuliskan alasan penolakan. Alasan akan terlihat pada dashboard browser ini.</p>
+      `<p class="mb-2">Pilih atau tuliskan alasan penolakan. Alasan akan tersimpan dan terlihat oleh pelanggan.</p>
        <label for="paymentRejectReason" class="form-label small">Alasan penolakan</label>
        <select id="paymentRejectReason" class="form-select" onchange="$('#paymentRejectCustom').hidden=this.value!=='__custom__'">
          <option value="Rekening tidak ditemukan.">Rekening tidak ditemukan</option>
@@ -491,7 +513,7 @@ async function orderPayment(id, decision) {
          <option value="__custom__">Alasan lainnya</option>
        </select>
        <textarea id="paymentRejectCustom" class="form-control mt-2" rows="3" maxlength="300" placeholder="Tuliskan alasan penolakan..." hidden></textarea>
-       <small class="form-text text-muted">Penyimpanan alasan ini masih lokal di browser admin.</small>`,
+       <small class="form-text text-muted">Alasan penolakan disimpan pada pesanan.</small>`,
       async () => {
         const selectedReason = val('paymentRejectReason');
         const reason = selectedReason === '__custom__' ? val('paymentRejectCustom').trim() : selectedReason;
@@ -499,30 +521,10 @@ async function orderPayment(id, decision) {
           flash('Alasan penolakan wajib diisi.');
           return false;
         }
-        const previousReason = paymentRejectionReasons[id];
-        paymentRejectionReasons = { ...paymentRejectionReasons, [id]: reason };
-        try {
-          save('kukissAdminPaymentRejectionReasons', paymentRejectionReasons);
-        } catch (error) {
-          if (previousReason === undefined) delete paymentRejectionReasons[id];
-          else paymentRejectionReasons[id] = previousReason;
-          throw new Error('Alasan tidak dapat disimpan di browser. Kosongkan ruang penyimpanan lalu coba lagi.');
-        }
-        try {
-          const result = await api('order-payment', { method: 'POST', body: { id, decision } });
-          flash(result.message);
-          adminDataLoaded = false;
-          await loadAdminData();
-        } catch (error) {
-          if (previousReason === undefined) delete paymentRejectionReasons[id];
-          else paymentRejectionReasons[id] = previousReason;
-          try {
-            save('kukissAdminPaymentRejectionReasons', paymentRejectionReasons);
-          } catch (storageError) {
-            throw new Error(`${error.message} Selain itu, alasan lokal gagal dipulihkan: ${storageError.message}`);
-          }
-          throw error;
-        }
+        const result = await api('order-payment', { method: 'POST', body: { id, decision, reason } });
+        flash(result.message);
+        adminDataLoaded = false;
+        await loadAdminData();
       });
     return;
   }
@@ -538,10 +540,10 @@ async function orderPayment(id, decision) {
 }
 
 function showPaymentReason(id) {
-  const reason = paymentRejectionReasons[id] || orders.find(order => order.id === id)?.payment_reason;
-  if (!reason) return flash('Alasan penolakan belum tersedia pada browser ini.');
+  const reason = orders.find(order => order.id === id)?.payment_reason;
+  if (!reason) return flash('Alasan penolakan belum tersedia pada data pesanan.');
   modal('Pembayaran ditolak',
-    `<div class="payment-rejection-reason"><span class="badge text-bg-danger mb-2"><i class="bi bi-exclamation-circle me-1"></i>Perlu ditindaklanjuti</span><strong class="d-block mb-1">Alasan penolakan</strong><p class="mb-0">${escapeHTML(reason)}</p></div>
+    `<div class="order-reason-card order-reason-card--rejected"><span class="badge text-bg-danger mb-2"><i class="bi bi-exclamation-circle me-1"></i>Perlu ditindaklanjuti</span><strong class="d-block mb-1">Alasan penolakan</strong><p>${escapeHTML(reason)}</p></div>
      <small class="text-muted d-block mt-2">Alasan ini berasal dari catatan pembayaran pesanan.</small>`);
 }
 
@@ -608,35 +610,28 @@ function ingredientForm(id) {
         flash('Bahan baku dengan nama tersebut sudah ada.');
         return false;
       }
-      const updatedIngredient = {
-        id: ingredient?.id || Date.now(),
-        name,
-        available: availabilityValue === 'true'
-      };
-      const updated = ingredient
-        ? ingredients.map(item => item.id === ingredient.id ? updatedIngredient : item)
-        : [...ingredients, updatedIngredient];
-      try {
-        save('kukissAdminIngredients', updated);
-      } catch (error) {
-        throw new Error('Data bahan baku gagal disimpan di browser. Kosongkan ruang penyimpanan lalu coba lagi.');
-      }
-      ingredients = updated;
-      flash('Data bahan baku tersimpan di browser ini.');
+      const result = await api('ingredient-save', {
+        method: 'POST',
+        body: { id: ingredient?.id || 0, name, available: availabilityValue === 'true' }
+      });
+      adminDataLoaded = false;
+      await loadAdminData();
+      flash(result.message);
     });
 }
 
-function deleteIngredient(id) {
+async function deleteIngredient(id) {
   const ingredient = ingredients.find(item => item.id === id);
   if (!ingredient || !confirm(`Hapus bahan baku "${ingredient.name}"?`)) return;
-  const updated = ingredients.filter(item => item.id !== id);
   try {
-    save('kukissAdminIngredients', updated);
+    const result = await api('ingredient-delete', { method: 'POST', body: { id } });
+    adminDataLoaded = false;
+    await loadAdminData();
+    flash(result.message);
+    await render();
   } catch (error) {
-    return flash('Bahan baku gagal dihapus karena penyimpanan browser tidak tersedia.');
+    flash(error.message);
   }
-  ingredients = updated;
-  render();
 }
 
 async function nextStatus(id) {

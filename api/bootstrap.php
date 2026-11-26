@@ -108,9 +108,15 @@ function positive_int(mixed $value, string $label, int $max = 1000000000): int {
   return $validated;
 }
 
-function uploaded_image(string $field, string $folder, bool $required = false): ?string {
+function uploaded_image(
+  string $field,
+  string $folder,
+  bool $required = false,
+  int $maxBytes = 8 * 1024 * 1024,
+  string $requiredMessage = 'Bukti pembayaran wajib diunggah.'
+): ?string {
   if (!isset($_FILES[$field]) || $_FILES[$field]['error'] === UPLOAD_ERR_NO_FILE) {
-    if ($required) json_response(['error' => 'Bukti pembayaran wajib diunggah.'], 422);
+    if ($required) json_response(['error' => $requiredMessage], 422);
     return null;
   }
 
@@ -118,8 +124,8 @@ function uploaded_image(string $field, string $folder, bool $required = false): 
   if ($file['error'] !== UPLOAD_ERR_OK || !is_uploaded_file($file['tmp_name'])) {
     json_response(['error' => 'Gambar gagal diunggah. Silakan coba lagi.'], 422);
   }
-  if ($file['size'] <= 0 || $file['size'] > 8 * 1024 * 1024) {
-    json_response(['error' => 'Ukuran gambar maksimal 8 MB.'], 422);
+  if ($file['size'] <= 0 || $file['size'] > $maxBytes) {
+    json_response(['error' => 'Ukuran gambar maksimal ' . (int)ceil($maxBytes / 1024 / 1024) . ' MB.'], 422);
   }
 
   $mime = (new finfo(FILEINFO_MIME_TYPE))->file($file['tmp_name']);
@@ -144,9 +150,15 @@ function uploaded_image(string $field, string $folder, bool $required = false): 
 }
 
 function remove_public_upload(?string $path): void {
-  if (!$path || !preg_match('#^public/uploads/(products|profiles)/[a-f0-9]{40}\.(jpg|png|webp)$#', $path)) return;
+  if (!$path || !preg_match('#^public/uploads/(products|profiles|feedback|evidence)/[a-f0-9]{40}\.(jpg|png|webp|mp4|webm|mov)$#', $path)) return;
   $file = dirname(__DIR__) . '/' . $path;
   if (is_file($file) && !unlink($file)) error_log("KU-KISS: gagal menghapus gambar $path");
+}
+
+function remove_private_upload(?string $path): void {
+  if (!$path || !preg_match('#^storage/(feedback|evidence)/[a-f0-9]{40}\.(jpg|png|webp|mp4|webm|mov)$#', $path)) return;
+  $file = dirname(__DIR__) . '/' . $path;
+  if (is_file($file) && !unlink($file)) error_log("KU-KISS: gagal menghapus file $path");
 }
 
 function user_record(int $id, string $role): ?array {
