@@ -102,14 +102,6 @@ function previewCustomerFeedbackMedia(event) {
   reader.onerror = () => flash('File gagal dibaca. Coba pilih file lain.');
   reader.readAsDataURL(file);
 }
-function readCustomerFeedbackMedia(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = () => reject(new Error('File gagal dibaca. Coba pilih file lain.'));
-    reader.readAsDataURL(file);
-  });
-}
 async function saveCustomerFeedback(event, orderId) {
   event.preventDefault();
   const form = event.currentTarget;
@@ -117,10 +109,6 @@ async function saveCustomerFeedback(event, orderId) {
   if (!comment) return flash('Tulis komentar terlebih dahulu.');
   const button = form.querySelector('[type="submit"]');
   const mediaInput = form.querySelector('input[type="file"]');
-  const previousDraft = customerFeedbackDrafts[orderId];
-  const previousMedia = typeof previousDraft === 'object' && previousDraft
-    ? previousDraft.media || previousDraft.photo || ''
-    : '';
   if (button) button.disabled = true;
   try {
     const file = mediaInput.files[0];
@@ -132,19 +120,72 @@ async function saveCustomerFeedback(event, orderId) {
         return flash('Pilih foto JPG/PNG/WebP (maks. 1 MB) atau video MP4/WebM/MOV (maks. 2 MB).');
       }
     }
-    const media = file ? await readCustomerFeedbackMedia(file) : previousMedia;
-    customerFeedbackDrafts[orderId] = { comment, media };
+    const body = new FormData();
+    body.set('order_id', orderId);
+    body.set('message', comment);
+    if (file) body.set('attachment', file);
+    const result = await api('feedback-create', { method: 'POST', body });
+    delete customerFeedbackDrafts[orderId];
+    let draftCleanupFailed = false;
     try {
       save('customerFeedbackDrafts', customerFeedbackDrafts);
-    } catch (error) {
-      customerFeedbackDrafts[orderId] = previousDraft;
-      throw new Error('Draf tidak dapat disimpan di browser. Kosongkan ruang penyimpanan lalu coba lagi.');
+    } catch (storageError) {
+      draftCleanupFailed = true;
     }
-    flash('Draf komentar dan foto tersimpan di perangkat ini. Belum terkirim ke admin.');
+    form.reset();
+    form.querySelector('textarea').value = '';
+    form.querySelectorAll('.customer-feedback-preview').forEach(preview => {
+      preview.hidden = true;
+      preview.removeAttribute('src');
+      if (preview.tagName === 'VIDEO') preview.load();
+    });
+    flash(draftCleanupFailed
+      ? 'Feedback terkirim, tetapi draf lama di browser tidak dapat dibersihkan.'
+      : result.message || 'Feedback berhasil dikirim ke admin.');
   } catch (error) {
     flash(error.message);
   } finally {
     if (button) button.disabled = false;
+  }
+}
+
+async function saveFeedback(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const message = $('#feedbackMessage').value.trim();
+  const orderId = $('#feedbackOrder').value;
+  if (!message) return flash('Tulis kritik, saran, atau masukan terlebih dahulu.');
+  const button = form.querySelector('[type="submit"]');
+  button.disabled = true;
+  try {
+    const result = await api('feedback-create', {
+      method: 'POST',
+      body: { message, order_id: orderId || null }
+    });
+    form.reset();
+    flash(result.message || 'Feedback berhasil dikirim ke admin.');
+  } catch (error) {
+    flash(error.message);
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function cancelCustomerOrder(id) {
+  const order = orders.find(item => item.id === Number(id));
+  if (!order) return flash('Pesanan tidak ditemukan.');
+  const eligibility = orderCancellationEligibility(order);
+  if (!eligibility.available) return flash('Tanggal pengantaran atau pengambilan belum tersedia. Hubungi admin untuk bantuan.');
+  if (!eligibility.allowed) return flash(`Pesanan hanya dapat dibatalkan sampai H-3 (${formatDateTime(eligibility.deadline)}).`);
+  if (!confirm(`Batalkan pesanan #${order.id}?`)) return;
+  try {
+    const result = await api('order-cancel', { method: 'POST', body: { id: order.id } });
+    ordersLoaded = false;
+    await loadOrders();
+    flash(result.message || 'Permintaan pembatalan berhasil dikirim.');
+    await render();
+  } catch (error) {
+    flash(error.message);
   }
 }
 async function doLogin(event) {
@@ -405,19 +446,86 @@ async function closeBatch(id) {
 }
 function outForm(id) {
   const expense = outs.find(value => value.id === id);
+  if (!ingredients.length) {
+    modal('Pengeluaran belum dapat dicatat',
+      '<div class="alert alert-warning mb-2">Tambahkan bahan baku terlebih dahulu. Pengeluaran hanya dapat dikaitkan dengan bahan yang terdaftar.</div><a href="#/admin/bahan" class="btn btn-outline-maroon btn-sm">Buka menu Bahan Baku</a>');
+    return;
+  }
+  const selectedIngredient = expense
+    ? ingredients.find(ingredient => ingredient.name === expense.keterangan)
+    : null;
+  const ingredientOptions = ingredients.map(ingredient =>
+    `<option value="${ingredient.id}" ${selectedIngredient?.id === ingredient.id ? 'selected' : ''}>${escapeHTML(ingredient.name)}</option>`
+  ).join('');
   modal(expense ? 'Edit Pengeluaran' : 'Tambah Pengeluaran',
-    fld('f1', 'Tanggal', expense?.tanggal || new Date().toLocaleDateString('sv-SE'), 'date') +
-    fld('f2', 'Keterangan', expense?.keterangan || '') +
-    fld('f3', 'Jumlah (Rp)', expense?.jumlah || '', 'number'),
+    `${expense && !selectedIngredient ? '<div class="alert alert-warning py-2">Bahan dari catatan lama tidak ada di daftar bahan baku. Pilih bahan yang terdaftar untuk melanjutkan.</div>' : ''}
+    <label for="expenseDate" class="small mt-2">Tanggal</label><input id="expenseDate" type="date" class="form-control" value="${escapeHTML(expense?.tanggal || new Date().toLocaleDateString('sv-SE'))}" required>
+    <label for="expenseIngredient" class="small mt-2">Bahan baku</label><select id="expenseIngredient" class="form-select" required><option value="">Pilih bahan baku</option>${ingredientOptions}</select>
+    ${fld('expenseAmount', 'Jumlah pengeluaran (Rp)', expense?.jumlah || '', 'number')}`,
     async () => {
+      const date = val('expenseDate');
+      const ingredientId = Number(val('expenseIngredient'));
+      const ingredient = ingredients.find(value => value.id === ingredientId);
+      const amountValue = val('expenseAmount').trim();
+      const amount = Number(amountValue);
+      if (!date || !ingredient || !amountValue || !Number.isFinite(amount) || amount < 1) {
+        flash('Tanggal, bahan baku terdaftar, dan jumlah pengeluaran wajib diisi dengan benar.');
+        return false;
+      }
       await api('expense-save', { method: 'POST', body: {
-        id: expense?.id || 0, expense_date: val('f1'), description: val('f2'), amount: val('f3')
+        id: expense?.id || 0, expense_date: date, description: ingredient.name, amount
       } });
       adminDataLoaded = false;
       await loadAdminData();
     });
 }
 async function orderPayment(id, decision) {
+  if (decision === 'reject') {
+    modal('Tolak Pembayaran',
+      `<p class="mb-2">Pilih atau tuliskan alasan penolakan. Alasan akan terlihat pada dashboard browser ini.</p>
+       <label for="paymentRejectReason" class="form-label small">Alasan penolakan</label>
+       <select id="paymentRejectReason" class="form-select" onchange="$('#paymentRejectCustom').hidden=this.value!=='__custom__'">
+         <option value="Rekening tidak ditemukan.">Rekening tidak ditemukan</option>
+         <option value="Bukti pembayaran tidak sesuai.">Bukti pembayaran tidak sesuai</option>
+         <option value="Jumlah pembayaran tidak sesuai.">Jumlah pembayaran tidak sesuai</option>
+         <option value="__custom__">Alasan lainnya</option>
+       </select>
+       <textarea id="paymentRejectCustom" class="form-control mt-2" rows="3" maxlength="300" placeholder="Tuliskan alasan penolakan..." hidden></textarea>
+       <small class="form-text text-muted">Penyimpanan alasan ini masih lokal di browser admin.</small>`,
+      async () => {
+        const selectedReason = val('paymentRejectReason');
+        const reason = selectedReason === '__custom__' ? val('paymentRejectCustom').trim() : selectedReason;
+        if (!reason) {
+          flash('Alasan penolakan wajib diisi.');
+          return false;
+        }
+        const previousReason = paymentRejectionReasons[id];
+        paymentRejectionReasons = { ...paymentRejectionReasons, [id]: reason };
+        try {
+          save('kukissAdminPaymentRejectionReasons', paymentRejectionReasons);
+        } catch (error) {
+          if (previousReason === undefined) delete paymentRejectionReasons[id];
+          else paymentRejectionReasons[id] = previousReason;
+          throw new Error('Alasan tidak dapat disimpan di browser. Kosongkan ruang penyimpanan lalu coba lagi.');
+        }
+        try {
+          const result = await api('order-payment', { method: 'POST', body: { id, decision } });
+          flash(result.message);
+          adminDataLoaded = false;
+          await loadAdminData();
+        } catch (error) {
+          if (previousReason === undefined) delete paymentRejectionReasons[id];
+          else paymentRejectionReasons[id] = previousReason;
+          try {
+            save('kukissAdminPaymentRejectionReasons', paymentRejectionReasons);
+          } catch (storageError) {
+            throw new Error(`${error.message} Selain itu, alasan lokal gagal dipulihkan: ${storageError.message}`);
+          }
+          throw error;
+        }
+      });
+    return;
+  }
   try {
     const result = await api('order-payment', { method: 'POST', body: { id, decision } });
     flash(result.message);
@@ -428,8 +536,112 @@ async function orderPayment(id, decision) {
     flash(error.message);
   }
 }
+
+function showPaymentReason(id) {
+  const reason = paymentRejectionReasons[id] || orders.find(order => order.id === id)?.payment_reason;
+  if (!reason) return flash('Alasan penolakan belum tersedia pada browser ini.');
+  modal('Pembayaran ditolak',
+    `<div class="payment-rejection-reason"><span class="badge text-bg-danger mb-2"><i class="bi bi-exclamation-circle me-1"></i>Perlu ditindaklanjuti</span><strong class="d-block mb-1">Alasan penolakan</strong><p class="mb-0">${escapeHTML(reason)}</p></div>
+     <small class="text-muted d-block mt-2">Alasan ini berasal dari catatan pembayaran pesanan.</small>`);
+}
+
+function uploadOrderEvidence(id, stage) {
+  const labels = { before: 'Sebelum dikirim', after: 'Setelah selesai dikirim' };
+  const order = orders.find(item => item.id === id);
+  if (!order || !labels[stage]) return flash('Pesanan atau tahap bukti tidak valid.');
+  modal(`Bukti ${labels[stage]}`,
+    `<p>Pesanan #${id} · ${labels[stage]}</p>
+     <label for="orderEvidenceFile" class="form-label small">Pilih foto bukti (JPG, PNG, WebP; maks. 1 MB)</label>
+     <input id="orderEvidenceFile" type="file" class="form-control" accept="image/jpeg,image/png,image/webp">
+     <small class="form-text text-muted">Foto yang berhasil diunggah akan ditampilkan pada detail pesanan pelanggan.</small>`,
+    async () => {
+      const file = $('#orderEvidenceFile').files[0];
+      if (!file) {
+        flash('Pilih foto bukti terlebih dahulu.');
+        return false;
+      }
+      if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 1024 * 1024) {
+        flash('Pilih foto JPG, PNG, atau WebP dengan ukuran maksimal 1 MB.');
+        return false;
+      }
+      const form = new FormData();
+      form.set('order_id', id);
+      form.set('stage', stage);
+      form.set('image', file);
+      const result = await api('order-evidence-save', { method: 'POST', body: form });
+      flash(result.message || 'Bukti foto berhasil diunggah.');
+      adminDataLoaded = false;
+      await loadAdminData();
+    });
+}
+
+function viewOrderEvidence(id, stage) {
+  const order = orders.find(item => item.id === id);
+  const imagePath = stage === 'before' ? order?.evidence_before_path : order?.evidence_after_path;
+  if (!imagePath) {
+    return flash('Foto bukti tidak tersedia atau formatnya tidak valid.');
+  }
+  const title = stage === 'before' ? 'Bukti sebelum dikirim' : 'Bukti setelah selesai dikirim';
+  const imageUrl = `${API_URL}?action=order-evidence&id=${encodeURIComponent(id)}&stage=${encodeURIComponent(stage)}`;
+  modal(title, `<div class="text-center"><img src="${imageUrl}" alt="${title} pesanan ${id}" class="img-fluid rounded order-evidence-preview"></div>`);
+}
+
+function ingredientForm(id) {
+  const ingredient = id ? ingredients.find(item => item.id === id) : null;
+  if (id && !ingredient) return flash('Bahan baku tidak ditemukan.');
+  const isAvailable = ingredient ? ingredientStatus(ingredient) === 'tersedia' : true;
+  modal(ingredient ? 'Edit Bahan Baku' : 'Tambah Bahan Baku',
+    fld('ingredientName', 'Nama bahan baku', ingredient?.name || '') +
+    `<label for="ingredientAvailability" class="form-label small mt-2">Ketersediaan</label>
+     <select id="ingredientAvailability" class="form-select">
+       <option value="true" ${isAvailable ? 'selected' : ''}>Tersedia</option>
+       <option value="false" ${!isAvailable ? 'selected' : ''}>Tidak tersedia</option>
+     </select>`,
+    async () => {
+      const name = val('ingredientName').trim();
+      const availabilityValue = val('ingredientAvailability');
+      if (!name || !['true', 'false'].includes(availabilityValue)) {
+        flash('Isi nama bahan baku dan pilih ketersediaannya.');
+        return false;
+      }
+      if (ingredients.some(item => item.id !== ingredient?.id && item.name.toLowerCase() === name.toLowerCase())) {
+        flash('Bahan baku dengan nama tersebut sudah ada.');
+        return false;
+      }
+      const updatedIngredient = {
+        id: ingredient?.id || Date.now(),
+        name,
+        available: availabilityValue === 'true'
+      };
+      const updated = ingredient
+        ? ingredients.map(item => item.id === ingredient.id ? updatedIngredient : item)
+        : [...ingredients, updatedIngredient];
+      try {
+        save('kukissAdminIngredients', updated);
+      } catch (error) {
+        throw new Error('Data bahan baku gagal disimpan di browser. Kosongkan ruang penyimpanan lalu coba lagi.');
+      }
+      ingredients = updated;
+      flash('Data bahan baku tersimpan di browser ini.');
+    });
+}
+
+function deleteIngredient(id) {
+  const ingredient = ingredients.find(item => item.id === id);
+  if (!ingredient || !confirm(`Hapus bahan baku "${ingredient.name}"?`)) return;
+  const updated = ingredients.filter(item => item.id !== id);
+  try {
+    save('kukissAdminIngredients', updated);
+  } catch (error) {
+    return flash('Bahan baku gagal dihapus karena penyimpanan browser tidak tersedia.');
+  }
+  ingredients = updated;
+  render();
+}
+
 async function nextStatus(id) {
   const order = orders.find(value => value.id === id);
+  if (!order) return flash('Pesanan tidak ditemukan.');
   const next = ST[ST.indexOf(order.status) + 1];
   if (!next) return;
   try {
@@ -453,14 +665,11 @@ function chart() {
   const year = Number(YM.slice(0, 4));
   const values = BULAN.map((_, index) => {
     const month = `${year}-${String(index + 1).padStart(2, '0')}`;
-    const income = orders.filter(order => order.tgl.startsWith(month) && order.payment_status === 'Lunas')
-      .reduce((sum, order) => sum + order.total, 0);
-    const expenses = outs.filter(expense => expense.bulan === month).reduce((sum, expense) => sum + expense.jumlah, 0);
-    return income - expenses;
+    return incomeForMonth(month) - expensesForMonth(month);
   });
   chartDashboard = new Chart(canvas, {
     type: 'line',
-    data: { labels: BULAN, datasets: [{ data: values, borderColor: '#0a8f4e', backgroundColor: 'rgba(10,143,78,.15)', fill: true, tension: .4 }] },
+    data: { labels: BULAN, datasets: [{ label: 'Keuntungan', data: values, borderColor: '#0a8f4e', backgroundColor: 'rgba(10,143,78,.15)', fill: true, tension: .4 }] },
     options: { plugins: { legend: { display: false } } }
   });
 }
