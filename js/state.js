@@ -26,6 +26,13 @@ const YM = new Date().toLocaleDateString('sv-SE').slice(0, 7);
 
 let products = [], cats = [], orders = [], outs = [], batches = [], batchProductRecap = [];
 let cart = load('cart', []), user = null, csrf = '', appReady = false, adminDataLoaded = false, ordersLoaded = false;
+let ingredients = load('kukissAdminIngredients', []);
+let paymentRejectionReasons = load('kukissAdminPaymentRejectionReasons', {});
+let adminNotificationItems = load('kukissAdminNotifications', []);
+let adminNotificationRead = new Set(load('kukissAdminNotificationRead', []));
+let adminOrderSnapshots = load('kukissAdminOrderSnapshots', null);
+let adminFeedbackSnapshots = load('kukissAdminFeedbackSnapshots', null);
+let adminFeedbackItems = [];
 let q = '', mode = 'Pengantaran', ship = 5000, bukti = false;
 let deliveryArea = '', deliveryAddress = '';
 let customerNotificationItems = [];
@@ -35,6 +42,15 @@ let notificationRead = new Set(load('customerNotificationRead', []));
 let customerFeedbackDrafts = load('customerFeedbackDrafts', {});
 const prod = id => products.find(p => p.id == id);
 const go = id => location.hash = '#/produk/' + id;
+const formatDateTime = value => {
+  const raw = String(value ?? '').trim();
+  if (!raw) return '-';
+  const normalized = /^\d{4}-\d{2}-\d{2} \d/.test(raw) ? raw.replace(' ', 'T') : raw;
+  const date = new Date(normalized);
+  if (!Number.isFinite(date.getTime())) return '-';
+  const pad = number => String(number).padStart(2, '0');
+  return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+};
 
 async function api(action, options = {}) {
   const headers = new Headers(options.headers || {});
@@ -62,7 +78,12 @@ const mapOrder = value => ({
   id: Number(value.id),
   nama: value.customer_name || '',
   telepon: value.customer_phone || '',
-  payment_reason: value.payment_reason || value.rejection_reason || '',
+  payment_reason: value.payment_reason || value.rejection_reason || paymentRejectionReasons[value.id] || '',
+  scheduled_date: value.scheduled_date || value.pickup_date || value.delivery_date || value.tanggal_ambil || '',
+  cancellation_deadline: value.cancellation_deadline || '',
+  evidence_before_path: value.evidence_before_path || value.before_delivery_evidence || '',
+  evidence_after_path: value.evidence_after_path || value.after_delivery_evidence || '',
+  cancelled_by: value.cancelled_by || '',
   items: (value.items || []).map(item => ({ nama: item.name, qty: Number(item.quantity), harga: Number(item.unit_price) })),
   subtotal: Number(value.subtotal),
   ongkir: Number(value.shipping_fee),
@@ -106,6 +127,7 @@ async function loadAdminData() {
     batchId: Number(value.batch_id), productId: Number(value.product_id),
     nama: value.product_name, jumlah: Number(value.quantity)
   }));
+  syncAdminNotifications(data);
   adminDataLoaded = true;
 }
 

@@ -23,6 +23,26 @@ const DELIVERY_AREAS = [
   'Dinoyo', 'Jatimulyo', 'Ketawanggede', 'Lowokwaru', 'Merjosari',
   'Mojolangu', 'Tlogomas', 'Tunggulwulung', 'Oro-Oro Dowo', 'Klojen'
 ];
+function orderCancellationEligibility(order) {
+  const scheduledValue = order.cancellation_deadline || order.scheduled_date;
+  if (!scheduledValue) return { available: false, allowed: false, deadline: null };
+  const isDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(scheduledValue);
+  const normalized = /^\d{4}-\d{2}-\d{2} \d/.test(scheduledValue)
+    ? scheduledValue.replace(' ', 'T')
+    : scheduledValue;
+  const scheduledDate = new Date(normalized);
+  if (!Number.isFinite(scheduledDate.getTime())) return { available: false, allowed: false, deadline: null };
+  const deadline = order.cancellation_deadline
+    ? scheduledDate
+    : new Date(scheduledDate.getTime() - 3 * 24 * 60 * 60 * 1000);
+  if (!order.cancellation_deadline && isDateOnly) deadline.setHours(23, 59, 59, 999);
+  const active = !['Selesai', 'Dibatalkan'].includes(order.status);
+  return { available: true, allowed: active && Date.now() <= deadline.getTime(), deadline };
+}
+
+const customerOrderEvidenceUrl = (id, stage) =>
+  `${API_URL}?action=order-evidence&id=${encodeURIComponent(id)}&stage=${encodeURIComponent(stage)}`;
+
 function loadCustomerNotifications() {
   if (customerNotificationsLoaded) return Promise.resolve();
   if (customerNotificationsRequest) return customerNotificationsRequest;
@@ -169,6 +189,14 @@ const P = {
     const subtotal = Number(pesanan.subtotal ?? (pesanan.total - ongkir));
     const delivery = pesanan.alamat !== 'Pick Up';
     const statusLabel = delivery && pesanan.status === 'Siap Diambil' ? 'Siap Diantar' : pesanan.status;
+    const cancellation = orderCancellationEligibility(pesanan);
+    const canOfferCancellation = !['Selesai', 'Dibatalkan'].includes(pesanan.status);
+    const cancellationControl = !canOfferCancellation ? ''
+      : !cancellation.available
+        ? '<div class="alert alert-info mt-3 mb-0">Tanggal atau jadwal pengantaran/pengambilan belum tersedia. Pembatalan belum dapat dihitung; silakan hubungi admin.</div>'
+        : cancellation.allowed
+          ? `<div class="order-cancel-panel"><p class="small text-muted mb-2">Pembatalan hanya dapat dilakukan paling lambat H-3 sebelum jadwal pesanan (${formatDateTime(cancellation.deadline)}).</p><button type="button" class="btn btn-outline-danger btn-sm" onclick="cancelCustomerOrder(${pesanan.id})"><i class="bi bi-x-circle me-1"></i>Batalkan pesanan</button></div>`
+          : `<div class="order-cancel-panel"><button type="button" class="btn btn-outline-secondary btn-sm" disabled><i class="bi bi-lock me-1"></i>Batas pembatalan terlewati</button><p class="small text-muted mt-2 mb-0">Pembatalan hanya dapat dilakukan sampai H-3 sebelum jadwal (${formatDateTime(cancellation.deadline)}).</p></div>`;
     const feedbackDraft = customerFeedbackDrafts[pesanan.id];
     const feedbackComment = typeof feedbackDraft === 'string' ? feedbackDraft : feedbackDraft?.comment || '';
     const feedbackMedia = typeof feedbackDraft === 'object' && feedbackDraft
@@ -186,7 +214,9 @@ const P = {
         <h4 class="mb-0">Detail Pesanan #${pesanan.id}</h4>
         <a href="#/riwayat" class="btn btn-outline-maroon btn-sm"><i class="bi bi-arrow-left"></i> Riwayat Pesanan</a>
       </div>
-      ${pesanan.payment_status ? `<div class="alert ${pesanan.payment_status === 'Lunas' ? 'alert-success' : pesanan.payment_status === 'Ditolak' ? 'alert-danger' : 'alert-warning'}">Pembayaran: <strong>${escapeHTML(pesanan.payment_status)}</strong>${pesanan.payment_status === 'Ditolak' ? `<div class="mt-1">Alasan: ${escapeHTML(pesanan.payment_reason || 'Belum tersedia dari sistem.')}</div>` : ''}</div>` : ''}
+      ${pesanan.payment_status === 'Ditolak'
+        ? `<div class="payment-rejection-reason customer-payment-rejection"><span class="badge text-bg-danger mb-2"><i class="bi bi-exclamation-circle me-1"></i>Pembayaran ditolak</span><strong class="d-block mb-1">Alasan</strong><p class="mb-0">${escapeHTML(pesanan.payment_reason || 'Alasan penolakan belum tersedia. Silakan hubungi admin.')}</p></div>`
+        : pesanan.payment_status ? `<div class="alert ${pesanan.payment_status === 'Lunas' ? 'alert-success' : 'alert-warning'}">Pembayaran: <strong>${escapeHTML(pesanan.payment_status)}</strong></div>` : ''}
       ${pesanan.status === 'Dibatalkan' ? '<div class="alert alert-danger">Pesanan dibatalkan. Periksa status pembayaran untuk informasi lebih lanjut.</div>' : ''}
       <ol class="order-progress" aria-label="Progres pesanan">
         ${tahap.map((label, index) => `<li class="${index <= statusIndex ? 'is-active' : ''} ${index < statusIndex ? 'is-complete' : ''}">
@@ -207,6 +237,11 @@ const P = {
       ${delivery
         ? `<div class="order-delivery-address box3d"><h6 class="text-maroon">Alamat Pengantaran</h6><p class="mb-0">${escapeHTML(pesanan.alamat || 'Alamat belum tersedia.')}</p></div>`
         : `<div class="box3d p-3 p-md-4 mt-3">${pickupLocation()}</div>`}
+      ${(pesanan.evidence_before_path || pesanan.evidence_after_path) ? `<section class="box3d order-shipping-evidence mt-3"><h6 class="text-maroon">Bukti proses pesanan</h6><div class="row g-3">
+        ${pesanan.evidence_before_path ? `<div class="col-md-6"><strong class="small">Pesanan disiapkan</strong><img class="customer-feedback-preview mt-2" src="${customerOrderEvidenceUrl(pesanan.id, 'before')}" alt="Bukti pesanan ${pesanan.id} sebelum dikirim" loading="lazy"></div>` : ''}
+        ${pesanan.evidence_after_path ? `<div class="col-md-6"><strong class="small">Pesanan selesai dikirim</strong><img class="customer-feedback-preview mt-2" src="${customerOrderEvidenceUrl(pesanan.id, 'after')}" alt="Bukti pesanan ${pesanan.id} setelah dikirim" loading="lazy"></div>` : ''}
+      </div></section>` : ''}
+      ${cancellationControl}
       <form class="box3d customer-feedback mt-3" onsubmit="saveCustomerFeedback(event, '${escapeHTML(pesanan.id)}')">
         <h6 class="text-maroon"><i class="bi bi-chat-left-text me-1"></i>Kritik, saran, atau komplain</h6>
         <label for="feedback-${escapeHTML(pesanan.id)}" class="form-label small">Ceritakan tanggapan Anda mengenai pesanan ini.</label>
@@ -216,8 +251,8 @@ const P = {
         <small id="feedbackMediaHelp-${escapeHTML(pesanan.id)}" class="form-text text-muted">Foto JPG/PNG/WebP maks. 1 MB; video MP4/WebM/MOV maks. 2 MB.</small>
         <img id="feedbackMediaImage-${escapeHTML(pesanan.id)}" class="customer-feedback-preview" src="${feedbackIsVideo ? '' : escapeHTML(feedbackMedia)}" alt="Pratinjau foto pendukung" ${feedbackMedia && !feedbackIsVideo ? '' : 'hidden'}>
         <video id="feedbackMediaVideo-${escapeHTML(pesanan.id)}" class="customer-feedback-preview" src="${feedbackIsVideo ? escapeHTML(feedbackMedia) : ''}" controls playsinline ${feedbackIsVideo ? '' : 'hidden'}></video>
-        <div class="customer-feedback-note">Draf komentar dan media tersimpan di perangkat ini, belum terkirim ke admin.</div>
-        <button type="submit" class="btn btn-outline-maroon btn-sm mt-2">Simpan draf komentar</button>
+        <div class="customer-feedback-note">Masukan akan dikirim ke admin setelah berhasil tersimpan.</div>
+        <button type="submit" class="btn btn-outline-maroon btn-sm mt-2">Kirim feedback</button>
       </form>
       <div class="order-aftercare">
         <span class="text-muted small">Status: <strong>${statusLabel}</strong> · Pesanan #${pesanan.id}</span>
@@ -242,7 +277,7 @@ const P = {
               <span class="customer-notification-copy">
                 <strong>${escapeHTML(item.title)}</strong>
                 <span>${escapeHTML(item.message)}</span>
-                <small>${item.type === 'demo' ? 'Contoh notifikasi · Simulasi' : `Pesanan #${escapeHTML(item.id)}${item.createdAt ? ` · ${escapeHTML(item.createdAt)}` : ''}`}</small>
+                <small>${item.type === 'demo' ? 'Contoh notifikasi · Simulasi' : `Pesanan #${escapeHTML(item.id)}${item.createdAt ? ` · ${escapeHTML(formatDateTime(item.createdAt))}` : ''}`}</small>
               </span>
               <i class="bi bi-chevron-right notification-chevron" aria-hidden="true"></i>`;
             const classes = `customer-notification-item box3d ${notificationRead.has(item.key) ? '' : 'is-unread'}`;
@@ -259,11 +294,24 @@ const P = {
         </div>
       </section>`,
 
+  feedback: () => !user || user.role !== 'customer'
+    ? `<div class="box3d p-5 text-center"><h5>Masuk sebagai pelanggan untuk mengirim feedback.</h5><a href="#/login" class="btn btn-maroon mt-2">Masuk</a></div>`
+    : `<section class="box3d customer-feedback-page p-4 p-md-5">
+        <div class="mb-4"><h4 class="text-maroon">Kritik, Saran, dan Masukan</h4><p class="text-muted mb-0">Bantu kami meningkatkan layanan KU-KISS.</p></div>
+        <form onsubmit="saveFeedback(event)">
+          <label for="feedbackOrder" class="form-label">Pesanan terkait <span class="text-muted">(opsional)</span></label>
+          <select id="feedbackOrder" class="form-select mb-3"><option value="">Masukan umum</option>${orders.map(order => `<option value="${order.id}">Pesanan #${order.id} · ${formatDateTime(order.tgl)}</option>`).join('')}</select>
+          <label for="feedbackMessage" class="form-label">Pesan</label>
+          <textarea id="feedbackMessage" class="form-control" rows="6" maxlength="2000" placeholder="Tuliskan kritik, saran, atau masukan..." required></textarea>
+          <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap mt-3"><small class="text-muted">Maksimal 2.000 karakter.</small><button type="submit" class="btn btn-maroon"><i class="bi bi-send me-1"></i>Kirim feedback</button></div>
+        </form>
+      </section>`,
+
   riwayat: () => !user ? `<div class="box3d p-5 text-center"><h5>Masuk untuk melihat riwayat pesanan.</h5><a href="#/login" class="btn btn-maroon mt-2">Masuk</a></div>` :
     `<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3"><h4>Riwayat Pesanan</h4><a href="#/menu" class="btn btn-outline-maroon btn-sm">Belanja lagi</a></div>
     ${orders.length ? orders.map(order => `<article class="box3d p-3 p-md-4 mb-3">
       <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
-        <div><strong>Pesanan #${order.id}</strong><div class="text-muted small">${order.tgl}</div></div>
+        <div><strong>Pesanan #${order.id}</strong><div class="text-muted small">${formatDateTime(order.tgl)}</div></div>
         <span class="badge ${order.payment_status === 'Lunas' ? 'text-bg-success' : order.payment_status === 'Ditolak' ? 'text-bg-danger' : 'text-bg-warning'}">${order.payment_status || order.status}</span>
       </div>
       <div class="my-3">${order.items.map(item => `<div class="d-flex justify-content-between gap-2"><span>${item.nama} × ${item.qty}</span><span>${rp(item.harga * item.qty)}</span></div>`).join('')}</div>

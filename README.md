@@ -16,8 +16,18 @@ Skrip frontend saat ini menggunakan skrip browser klasik, bukan ES modules. Pert
 
 ## Fitur
 - Pelanggan dapat mendaftar/login, melihat katalog, berbelanja, mengunggah bukti pembayaran, serta melihat riwayat dan progres pesanan.
-- Admin dapat mengelola produk dan batch PO, serta melihat rekap produk per batch, pesanan, pengeluaran, dan laporan.
-- Data akun, katalog, pesanan, dan laporan disimpan melalui API PHP ke database; keranjang disimpan di browser.
+- Admin dapat mengelola produk, batch PO, dan pesanan; melihat ringkasan pemasukan, pembayaran yang menunggu verifikasi, serta pengeluaran bulan ini; melihat laporan pemasukan/pengeluaran bulanan; dan melihat pemasukan lunas pada daftar Batch PO.
+- Dashboard admin menyediakan notifikasi pesanan/feedback, daftar pesanan, alasan penolakan pembayaran, bukti foto sebelum/sesudah pengiriman, halaman feedback, pencarian bahan baku, dan laporan. Form bahan baku hanya memuat nama serta status tersedia/tidak tersedia.
+- Data akun, katalog, pesanan, dan laporan tersimpan melalui API PHP ke database; keranjang dan status baca notifikasi disimpan di browser. Data bahan baku serta alasan penolakan yang belum dikirim/diterima oleh API tetap lokal di browser admin. Unggah bukti, pengiriman feedback, daftar feedback admin, dan pembatalan pelanggan memerlukan endpoint backend; frontend menampilkan kegagalan API dan tidak menganggap data lokal sebagai berhasil terkirim.
+- Pemasukan pada daftar Batch PO diestimasi berdasarkan kecocokan tanggal pesanan dengan rentang tanggal batch; API saat ini belum mengirimkan relasi batch pada data pesanan, sehingga laporan historis memerlukan integrasi backend agar akurat. Status bahan baku hanya menandai ketersediaan dan tidak mengubah stok saat catatan pengeluaran dibuat.
+
+### Integrasi backend untuk revisi frontend
+Bagian ini adalah kontrak yang diharapkan frontend; perubahan endpoint/database dikerjakan terpisah di backend.
+- `admin-data` perlu mengirim `feedback` (array berisi `id`, `customer_name`, `order_id`, `message`, dan `created_at`) agar notifikasi serta rekap feedback admin terisi.
+- `orders`/`admin-data.orders` perlu mengirim `scheduled_date` atau `cancellation_deadline` untuk menampilkan batas pembatalan H-3. Frontend menolak pembatalan tanpa jadwal, tetapi backend tetap wajib memvalidasi H-3 secara otoritatif pada endpoint `order-cancel` (`POST` JSON `{ "id": <order_id> }`).
+- `feedback-create` menerima `POST` multipart (`message`, opsional `order_id` dan `attachment`) untuk form feedback per pesanan, atau `POST` JSON (`message`, opsional `order_id`) untuk feedback umum.
+- `order-evidence-save` menerima `POST` multipart (`order_id`, `stage` bernilai `before`/`after`, dan `image`). Respons `admin-data.orders` perlu mengembalikan `evidence_before_path`/`evidence_after_path`; `order-evidence` (`GET` dengan `id` dan `stage`) perlu menyajikan gambar yang diizinkan untuk dilihat pelanggan terkait.
+- Agar alasan penolakan tersedia konsisten untuk pelanggan, respons `orders` dan `admin-data.orders` perlu mengirim `payment_reason` atau `rejection_reason`; penyimpanan lokal admin hanya berlaku pada browser yang melakukan penolakan.
 
 ## Persyaratan
 - PHP 8.1 atau lebih baru dengan ekstensi PDO PostgreSQL (`pdo_pgsql`), `fileinfo`, dan `mbstring`.
