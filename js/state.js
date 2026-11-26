@@ -24,21 +24,16 @@ const flash = m => {
 const BULAN = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 const YM = new Date().toLocaleDateString('sv-SE').slice(0, 7);
 
-let products = [], cats = [], orders = [], outs = [], batches = [], batchProductRecap = [];
+let products = [], cats = [], orders = [], outs = [], batches = [], batchProductRecap = [], deliveryAreas = [];
 let cart = load('cart', []), user = null, csrf = '', appReady = false, adminDataLoaded = false, ordersLoaded = false;
-let ingredients = load('kukissAdminIngredients', []);
-let paymentRejectionReasons = load('kukissAdminPaymentRejectionReasons', {});
-let adminNotificationItems = load('kukissAdminNotifications', []);
-let adminNotificationRead = new Set(load('kukissAdminNotificationRead', []));
-let adminOrderSnapshots = load('kukissAdminOrderSnapshots', null);
-let adminFeedbackSnapshots = load('kukissAdminFeedbackSnapshots', null);
+let ingredients = [];
+let adminNotificationItems = [];
 let adminFeedbackItems = [];
-let q = '', mode = 'Pengantaran', ship = 5000, bukti = false;
+let q = '', mode = 'Pengantaran', bukti = false;
 let deliveryArea = '', deliveryAddress = '';
 let customerNotificationItems = [];
 let customerNotificationsLoaded = false;
 let customerNotificationsRequest = null;
-let notificationRead = new Set(load('customerNotificationRead', []));
 let customerFeedbackDrafts = load('customerFeedbackDrafts', {});
 const prod = id => products.find(p => p.id == id);
 const go = id => location.hash = '#/produk/' + id;
@@ -76,9 +71,11 @@ const mapProduct = value => ({
 const mapOrder = value => ({
   ...value,
   id: Number(value.id),
+  batch_id: Number(value.batch_id || 0),
   nama: value.customer_name || '',
   telepon: value.customer_phone || '',
-  payment_reason: value.payment_reason || value.rejection_reason || paymentRejectionReasons[value.id] || '',
+  payment_reason: value.payment_reason || value.rejection_reason || '',
+  cancellation_reason: value.cancellation_reason || '',
   scheduled_date: value.scheduled_date || value.pickup_date || value.delivery_date || value.tanggal_ambil || '',
   cancellation_deadline: value.cancellation_deadline || '',
   evidence_before_path: value.evidence_before_path || value.before_delivery_evidence || '',
@@ -99,6 +96,10 @@ async function loadBootstrap() {
   user = mapUser(data.user);
   products = data.products.map(mapProduct);
   cats = data.categories.map(value => ({ id: Number(value.id), kode: value.code, nama: value.name }));
+  deliveryAreas = (data.delivery_areas || []).map(value => ({
+    id: Number(value.id), name: value.name, shipping_fee: Number(value.shipping_fee)
+  }));
+  if (deliveryArea && !deliveryAreas.some(area => String(area.id) === String(deliveryArea))) deliveryArea = '';
   cart = cart.filter(item => products.some(product => product.id === Number(item.id)));
   save('cart', cart);
   appReady = true;
@@ -117,7 +118,10 @@ async function loadAdminData() {
   cats = data.categories.map(value => ({ id: Number(value.id), kode: value.code, nama: value.name }));
   outs = data.expenses.map(value => ({
     id: Number(value.id), bulan: value.expense_date.slice(0, 7), tanggal: value.expense_date,
-    keterangan: value.description, jumlah: Number(value.amount)
+    ingredientId: Number(value.ingredient_id || 0), keterangan: value.description, jumlah: Number(value.amount)
+  }));
+  ingredients = data.ingredients.map(value => ({
+    id: Number(value.id), name: value.name, available: Boolean(value.available)
   }));
   batches = data.batches.map(value => ({
     id: Number(value.id), nama: value.name, mulai: value.start_date,
