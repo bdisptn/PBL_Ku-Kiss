@@ -359,7 +359,7 @@ footer {
 }
 
 .admin-card .admin-orders-table {
-  min-width: 1320px;
+  min-width: 1450px;
   font-size: clamp(13px, 1vw, 14px);
 }
 
@@ -414,6 +414,13 @@ footer {
 .admin-card .admin-orders-table .badge {
   font-size: 13px;
   font-weight: 600;
+}
+
+.admin-card .order-status-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
 }
 
 .admin-card .admin-orders-table .order-payment-reason-link {

@@ -38,6 +38,7 @@ function orderCancellationEligibility(order) {
 
 const customerOrderEvidenceUrl = (id, stage) =>
   `${API_URL}?action=order-evidence&id=${encodeURIComponent(id)}&stage=${encodeURIComponent(stage)}`;
+const canLeaveOrderFeedback = order => order.status === 'Selesai' && Boolean(order.evidence_after_path);
 
 function loadCustomerNotifications() {
   if (customerNotificationsLoaded) return Promise.resolve();
@@ -258,7 +259,7 @@ const P = {
         ${pesanan.evidence_after_path ? `<figure class="order-evidence-card"><figcaption>Pesanan selesai dikirim</figcaption><img class="order-shipping-evidence-image" src="${customerOrderEvidenceUrl(pesanan.id, 'after')}" alt="Bukti pesanan ${pesanan.id} setelah dikirim" loading="lazy"></figure>` : ''}
       </div></section>` : ''}
       ${cancellationControl}
-      <form class="box3d customer-feedback mt-3" onsubmit="saveCustomerFeedback(event, '${escapeHTML(pesanan.id)}')">
+      ${canLeaveOrderFeedback(pesanan) ? `<form class="box3d customer-feedback mt-3" onsubmit="saveCustomerFeedback(event, '${escapeHTML(pesanan.id)}')">
         <h6 class="text-maroon"><i class="bi bi-chat-left-text me-1"></i>Kritik, saran, atau komplain</h6>
         <label for="feedback-${escapeHTML(pesanan.id)}" class="form-label small">Ceritakan tanggapan Anda mengenai pesanan ini.</label>
         <textarea id="feedback-${escapeHTML(pesanan.id)}" class="form-control" rows="4" maxlength="2000" placeholder="Tulis komentar..." required>${escapeHTML(feedbackComment)}</textarea>
@@ -269,7 +270,7 @@ const P = {
         <video id="feedbackMediaVideo-${escapeHTML(pesanan.id)}" class="customer-feedback-preview" src="${feedbackIsVideo ? escapeHTML(feedbackMedia) : ''}" controls playsinline ${feedbackIsVideo ? '' : 'hidden'}></video>
         <div class="customer-feedback-note">Masukan akan dikirim ke admin setelah berhasil tersimpan.</div>
         <button type="submit" class="btn btn-outline-maroon btn-sm mt-2">Kirim feedback</button>
-      </form>
+      </form>` : ''}
       <div class="order-aftercare">
         <span class="text-muted small">Status: <strong>${statusLabel}</strong> · Pesanan #${pesanan.id}</span>
         <a href="#/menu" class="btn btn-outline-maroon btn-sm">Kembali ke Menu</a>
@@ -312,7 +313,7 @@ const P = {
         <div class="mb-4"><h4 class="text-maroon">Kritik, Saran, dan Masukan</h4><p class="text-muted mb-0">Bantu kami meningkatkan layanan KU-KISS.</p></div>
         <form onsubmit="saveFeedback(event)">
           <label for="feedbackOrder" class="form-label">Pesanan terkait <span class="text-muted">(opsional)</span></label>
-          <select id="feedbackOrder" class="form-select mb-3"><option value="">Masukan umum</option>${orders.map(order => `<option value="${order.id}">Pesanan #${order.id} · ${formatDateTime(order.tgl)}</option>`).join('')}</select>
+          <select id="feedbackOrder" class="form-select mb-3"><option value="">Masukan umum</option>${orders.filter(canLeaveOrderFeedback).map(order => `<option value="${order.id}">Pesanan #${order.id} · ${formatDateTime(order.tgl)}</option>`).join('')}</select>
           <label for="feedbackMessage" class="form-label">Pesan</label>
           <textarea id="feedbackMessage" class="form-control" rows="6" maxlength="2000" placeholder="Tuliskan kritik, saran, atau masukan..." required></textarea>
           <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap mt-3"><small class="text-muted">Maksimal 2.000 karakter.</small><button type="submit" class="btn btn-maroon"><i class="bi bi-send me-1"></i>Kirim feedback</button></div>

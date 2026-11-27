@@ -3,6 +3,19 @@ declare(strict_types=1);
 
 require __DIR__ . '/bootstrap.php';
 
+function record_login_attempt(string $identifier, bool $successful): void {
+  $ip = $_SERVER['REMOTE_ADDR'] ?? '';
+  if (!filter_var($ip, FILTER_VALIDATE_IP)) $ip = 'unknown';
+
+  $stmt = db()->prepare(
+    'INSERT INTO login_percobaan (identifier, ip, berhasil) VALUES (?, ?, ?)'
+  );
+  $stmt->bindValue(1, $identifier, PDO::PARAM_STR);
+  $stmt->bindValue(2, $ip, PDO::PARAM_STR);
+  $stmt->bindValue(3, $successful, PDO::PARAM_BOOL);
+  $stmt->execute();
+}
+
 function product_list(): array {
   return db()->query(
     'SELECT p.id_produk AS id, p.kode_produk AS code, p.nama_produk AS name,
@@ -277,9 +290,16 @@ function create_feedback(array $user): never {
   if (isset($data['order_id']) && $data['order_id'] !== '' && $data['order_id'] !== null) {
     $orderId = positive_int($data['order_id'], 'ID pesanan');
     if ($orderId < 1) json_response(['error' => 'ID pesanan tidak valid.'], 422);
-    $stmt = db()->prepare('SELECT 1 FROM pesanan WHERE id_pesanan = ? AND id_pelanggan = ?');
+    $stmt = db()->prepare(
+      'SELECT status_pesanan, bukti_sesudah_path
+       FROM pesanan WHERE id_pesanan = ? AND id_pelanggan = ?'
+    );
     $stmt->execute([$orderId, $user['id']]);
-    if (!$stmt->fetchColumn()) json_response(['error' => 'Pesanan tidak ditemukan untuk akun ini.'], 404);
+    $order = $stmt->fetch();
+    if (!$order) json_response(['error' => 'Pesanan tidak ditemukan untuk akun ini.'], 404);
+    if ($order['status_pesanan'] !== 'Selesai' || !$order['bukti_sesudah_path']) {
+      throw new ApiException('Feedback pesanan dapat dikirim setelah pesanan selesai dan bukti pengiriman diunggah admin.', 409);
+    }
   }
   $attachment = feedback_attachment();
   $pdo = db();
@@ -803,16 +823,22 @@ function save_ingredient(): never {
     $stmt = db()->prepare(
       'UPDATE bahan_baku SET nama_bahan = ?, tersedia = ? WHERE id_bahan = ?'
     );
-    $stmt->execute([$name, $available, $id]);
+    $stmt->bindValue(1, $name, PDO::PARAM_STR);
+    $stmt->bindValue(2, $available, PDO::PARAM_BOOL);
+    $stmt->bindValue(3, $id, PDO::PARAM_INT);
+    $stmt->execute();
     if ($stmt->rowCount() < 1) {
       $exists = db()->prepare('SELECT 1 FROM bahan_baku WHERE id_bahan = ?');
       $exists->execute([$id]);
       if (!$exists->fetchColumn()) throw new ApiException('Bahan baku tidak ditemukan.', 404);
     }
   } else {
-    db()->prepare(
+    $stmt = db()->prepare(
       'INSERT INTO bahan_baku (nama_bahan, tersedia) VALUES (?, ?)'
-    )->execute([$name, $available]);
+    );
+    $stmt->bindValue(1, $name, PDO::PARAM_STR);
+    $stmt->bindValue(2, $available, PDO::PARAM_BOOL);
+    $stmt->execute();
   }
   json_response(['message' => 'Bahan baku berhasil disimpan.']);
 }
@@ -1019,6 +1045,7 @@ try {
     $identifier = valid_text($data['email'] ?? '', 'Email atau username', 100);
     $password = $data['password'] ?? '';
     if (!is_string($password) || $password === '' || strlen($password) > 200) {
+      record_login_attempt($identifier, false);
       json_response(['error' => 'Email atau password salah.'], 401);
     }
     $stmt = db()->prepare('SELECT id_pelanggan AS id, password FROM pelanggan WHERE lower(email) = lower(?)');
@@ -1037,7 +1064,9 @@ try {
       $account = $stmt->fetch();
       $role = 'customer';
     }
-    if (!$account || !password_verify($password, $account['password'])) {
+    $authenticated = $account && password_verify($password, $account['password']);
+    record_login_attempt($identifier, (bool)$authenticated);
+    if (!$authenticated) {
       json_response(['error' => 'Email atau password salah.'], 401);
     }
     if (password_needs_rehash($account['password'], PASSWORD_DEFAULT)) {

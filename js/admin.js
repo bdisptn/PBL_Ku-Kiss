@@ -216,10 +216,10 @@ const A = {
       return `<tr><td>${index + 1}</td><td>${batchHtml(feedback.customer_name || feedback.name || 'Pelanggan')}</td>
         <td>${feedback.order_id ? `#${batchHtml(feedback.order_id)}` : '-'}</td><td>${batchHtml(feedback.message || feedback.content || feedback.komentar || '')}</td>
         <td>${attachment}</td><td>${batchHtml(formatDateTime(feedback.created_at))}</td><td><span class="badge ${unread ? 'text-bg-warning' : feedback.notification_id ? 'text-bg-success' : 'text-bg-secondary'}">${readStatus}</span></td>
-        <td>${unread ? `<button class="btn btn-sm btn-outline-maroon" onclick="markAdminNotificationRead(${feedback.notification_id})">Tandai dibaca</button>` : '-'}</td></tr>`;
+        </tr>`;
     });
     return `<h4>Feedback Pelanggan</h4><p class="text-muted">Kritik, saran, dan masukan dari pelanggan.</p>
-      ${rows.length ? tbl(['No.', 'Pelanggan', 'Pesanan', 'Feedback', 'Lampiran', 'Waktu', 'Status', 'Aksi'], rows) : '<div class="alert alert-info">Belum ada feedback yang diterima.</div>'}`;
+     ${rows.length ? tbl(['No.', 'Pelanggan', 'Pesanan', 'Feedback', 'Lampiran', 'Waktu', 'Status'], rows) : '<div class="alert alert-info">Belum ada feedback yang diterima.</div>'}`;
   },
   notifikasi: () => `<div class="admin-notifications-page"><div class="mb-3"><h4 class="mb-1">Notifikasi Admin</h4><p class="text-muted mb-0">Pemberitahuan pesanan, pembatalan, dan feedback terbaru.</p></div>${adminNotificationPanel()}</div>`,
   penjualan: () => `<div class="d-flex justify-content-between align-items-center flex-wrap gap-2"><div><h4 class="mb-1">Daftar Pesanan</h4><p class="text-muted mb-0">Verifikasi pembayaran, pantau status, dan dokumentasikan pesanan.</p></div><select id="orderStatusFilter" class="form-select form-select-sm admin-filter" onchange="filterAdminOrders()"><option value="">Semua pembayaran</option><option value="Menunggu Verifikasi">Menunggu verifikasi</option><option value="Lunas">Lunas</option><option value="Ditolak">Ditolak</option><option value="Dibatalkan">Dibatalkan</option></select></div>${sales()}`,
@@ -279,16 +279,19 @@ const sales = ({ limit } = {}) => {
       ? `<button class="btn btn-sm btn-success" onclick="orderPayment(${order.id},'approve')">Terima</button> <button class="btn btn-sm btn-danger" onclick="orderPayment(${order.id},'reject')">Tolak</button>`
       : `<span class="badge ${order.payment_status === 'Lunas' ? 'text-bg-success' : order.payment_status === 'Ditolak' ? 'text-bg-danger' : 'text-bg-warning'}">${batchHtml(order.payment_status)}</span>${reason ? `<button type="button" class="order-reason-link order-payment-reason-link" onclick="showPaymentReason(${order.id})"><i class="bi bi-info-circle"></i><span>Lihat alasan<br>pembayaran</span></button>` : ''}`;
     const status = order.payment_status === 'Lunas' && !['Selesai', 'Dibatalkan'].includes(order.status)
-      ? `<span class="badge text-bg-${STC[ST.indexOf(order.status)] || 'secondary'}">${batchHtml(order.status)}</span><button class="btn btn-sm btn-outline-maroon d-block mt-1" onclick="nextStatus(${order.id})">Lanjutkan</button>`
-      : `<span class="badge ${order.status === 'Dibatalkan' ? 'text-bg-danger' : 'text-bg-secondary'}">${batchHtml(order.status)}</span>`;
+      ? `<div class="order-status-actions"><span class="badge text-bg-${STC[ST.indexOf(order.status)] || 'secondary'}">${batchHtml(order.status)}</span><button class="btn btn-sm btn-outline-maroon" onclick="nextStatus(${order.id})">Lanjutkan</button></div>`
+      : `<div class="order-status-actions"><span class="badge ${order.status === 'Dibatalkan' ? 'text-bg-danger' : 'text-bg-secondary'}">${batchHtml(order.status)}</span></div>`;
+    const fulfillment = order.fulfillment === 'pickup' ? 'Pick Up'
+      : order.fulfillment === 'delivery' ? 'Pengantaran' : '-';
+    const address = order.fulfillment === 'pickup' ? '-' : order.alamat || '-';
     const paymentFilter = customerCancelled ? 'Dibatalkan' : order.payment_status;
     return `<tr data-payment-status="${batchHtml(paymentFilter)}"><td>${index + 1}</td><td><strong>#${order.id}</strong><br>${batchHtml(order.nama)}<small class="d-block text-muted">${batchHtml(order.telepon || '-')}</small></td>
-      <td>${order.items.map(item => `${item.qty}x ${batchHtml(item.nama)}`).join('<br>')}</td><td>${rp(order.total)}</td><td class="order-address-cell">${batchHtml(String(order.alamat || '-').replace(/^Wilayah:\s*/i, ''))}</td><td>${formatDateTime(order.tgl)}</td>
+      <td>${order.items.map(item => `${item.qty}x ${batchHtml(item.nama)}`).join('<br>')}</td><td>${rp(order.total)}</td><td>${fulfillment}</td><td class="order-address-cell">${batchHtml(String(address).replace(/^Wilayah:\s*/i, ''))}</td><td>${formatDateTime(order.tgl)}</td>
       <td>${payment}</td><td>${proof}</td><td>${status}${order.cancellation_reason ? `<button type="button" class="order-reason-link" onclick="showCancellationReason(${order.id})"><i class="bi bi-info-circle"></i><span>Lihat alasan<br>pembatalan</span></button>` : ''}</td><td>${stageEvidence('before')}<div class="mt-1"><button class="btn btn-sm btn-outline-maroon" onclick="uploadOrderEvidence(${order.id},'before')">Unggah foto</button></div></td>
       <td>${stageEvidence('after')}<div class="mt-1"><button class="btn btn-sm btn-outline-maroon" onclick="uploadOrderEvidence(${order.id},'after')">Unggah foto</button></div></td></tr>`;
   });
   return rows.length
-    ? tbl(['No.', 'Pelanggan', 'Produk', 'Total', 'Alamat', 'Tanggal', 'Pembayaran', 'Bukti bayar', 'Status pesanan', 'Bukti sebelum dikirim', 'Bukti setelah dikirim'], rows, 'admin-orders-table')
+    ? tbl(['No.', 'Pelanggan', 'Produk', 'Total', 'Metode pengambilan', 'Alamat', 'Tanggal', 'Pembayaran', 'Bukti bayar', 'Status pesanan', 'Bukti sebelum dikirim', 'Bukti setelah dikirim'], rows, 'admin-orders-table')
     : '<div class="box3d p-4 mt-3 text-center text-muted">Belum ada pesanan pelanggan.</div>';
 };
 function showCancellationReason(id) {
