@@ -38,7 +38,7 @@ Skrip frontend saat ini menggunakan skrip browser klasik, bukan ES modules. Pert
 - Koneksi internet untuk Bootstrap, Bootstrap Icons, Google Fonts, dan Chart.js CDN.
 
 ## Skema database
-Backend menggunakan skema PostgreSQL KU-KISS: `admin`, `pelanggan`, `kategori`, `produk`, `batch_po`, `wilayah_ongkir`, `pesanan`, `detail_pesanan`, `feedback`, `bahan_baku`, `pengeluaran`, `notifikasi_aplikasi`, `login_percobaan`, dan `notifikasi`. `database/schema.sql` membuat tabel yang belum ada, memperbarui batasan status pembayaran/pesanan, serta menghapus kolom stok produk yang sudah tidak digunakan.
+Backend menggunakan skema PostgreSQL KU-KISS: `admin`, `pelanggan`, `kategori`, `produk`, `batch_po`, `wilayah_ongkir`, `pesanan`, `detail_pesanan`, `feedback`, `bahan_baku`, `pengeluaran`, `notifikasi_aplikasi`, `login_percobaan`, dan `notifikasi`. `database/schema.sql` membuat tabel yang belum ada, memperbarui batasan status pembayaran/pesanan, serta menghapus kolom stok produk yang sudah tidak digunakan. `login_percobaan` mencatat identifier, alamat IP, waktu, dan hasil setiap percobaan login; password tidak disimpan di tabel tersebut.
 
 ### Setup lokal melalui pgAdmin (Windows)
 Jalankan pgAdmin dan hubungkan ke server PostgreSQL lokal. Buka **Query Tool** pada database `postgres`, jalankan perintah pertama, lalu jalankan perintah kedua secara terpisah. Ganti password contoh dengan password kuat dan simpan karena akan dipakai di konfigurasi aplikasi:
