@@ -87,7 +87,8 @@ textarea,
   font-size: 2rem;
 }
 
-.nav-profile-avatar {
+.nav-profile-avatar,
+.admin-profile-avatar {
   width: 32px;
   height: 32px;
   object-fit: cover;
@@ -869,8 +870,8 @@ footer {
   }
 
   .order-item {
-    grid-template-columns: minmax(0, 1fr) 34px minmax(100px, auto);
-    gap: 6px;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 8px;
     font-size: 14px;
   }
 
@@ -905,6 +906,7 @@ footer {
 }
 
 .order-page {
+  width: 100%;
   max-width: 930px;
   margin: 0 auto;
   padding: 8px 0 16px;
@@ -974,21 +976,26 @@ footer {
 }
 
 .order-summary {
+  width: 100%;
   overflow: hidden;
 }
 
 .order-items {
-  min-height: 180px;
   padding: 28px 38px;
 }
 
 .order-item {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 46px minmax(120px, auto);
+  grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 10px;
   align-items: center;
   margin-bottom: 10px;
   font-size: 14px;
+}
+
+.order-item > span:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .order-item:last-child {
