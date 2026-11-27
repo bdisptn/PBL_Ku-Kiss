@@ -11,7 +11,7 @@ ${user?.role === 'customer' ? '<li><a class="nav-link" href="#/riwayat"><i class
 ${user?.role === 'customer' ? `<li><a class="nav-link notification-link" href="#/notifikasi" title="Notifikasi" aria-label="Notifikasi, ${unreadCustomerNotificationCount()} belum dibaca">
   <span class="notification-bell"><i class="bi bi-bell"></i>${unreadCustomerNotificationCount() ? `<span class="notification-count">${unreadCustomerNotificationCount() > 99 ? '99+' : unreadCustomerNotificationCount()}</span>` : ''}</span>
 </a></li>` : ''}
-<li><a href="${user ? '#/profil' : '#/login'}" class="text-decoration-none" title="Profil">${user?.foto ? `<img src="${productImage(user.foto)}" alt="Foto profil" class="nav-profile-avatar">` : '<i class="bi bi-person-circle avatar"></i>'}</a></li>
+<li><a href="${user ? '#/profil' : '#/login'}" class="text-decoration-none" title="Profil"><img src="${user?.foto ? productImage(user.foto) : EMPTY_PROFILE_IMAGE}" alt="Foto profil" class="nav-profile-avatar"></a></li>
 <li>${user ? `<button class="btn btn-sm btn-keluar" onclick="logout()"><i class="bi bi-box-arrow-left"></i> Keluar</button>` : `<a class="btn btn-sm btn-masuk" href="#/login"><i class="bi bi-box-arrow-in-right"></i> Masuk</a>`}</li>
 </ul></div></div></nav>`;
 const foot = () => `<footer class="py-4"><div class="container row mx-auto g-3"><div class="col-md-8"><div class="brand fs-5"><img src="img/logo.png" class="logo">KU- KISS</div>
@@ -381,7 +381,7 @@ const P = {
   profil: () => {
     if (!user) return `<div class="box3d p-5 text-center"><h5>Silakan masuk terlebih dahulu.</h5><a href="#/login" class="btn btn-maroon mt-2">Masuk</a></div>`;
     return `<div class="box3d profile-card">
-      <div class="profile-heading"><img src="${user.foto ? productImage(user.foto) : 'img/profile.png'}" alt="Foto profil" class="profile-avatar"><h4>${user.nama}</h4></div>
+      <div class="profile-heading"><img src="${user.foto ? productImage(user.foto) : EMPTY_PROFILE_IMAGE}" alt="Foto profil" class="profile-avatar"><h4>${user.nama}</h4></div>
       <form class="profile-body" onsubmit="saveProfile(event)">
         <div class="profile-fields">
           <div class="profile-edit-row">
@@ -401,7 +401,7 @@ const P = {
             <button type="button" class="btn btn-sm btn-outline-maroon profile-edit-button" onclick="editProfileField('Telepon')">Edit</button>
           </div>
         </div>
-        <div class="profile-photo"><img id="profilePreview" src="${user.foto ? productImage(user.foto) : 'img/profile.png'}" alt="Foto profil"><label class="btn btn-sm btn-maroon">Ubah Foto<input id="profileFoto" type="file" accept="image/jpeg,image/png,image/webp" hidden onchange="saveProfilePhoto(event)"></label>${user.foto ? '<button type="button" class="btn btn-sm btn-outline-danger" onclick="removeProfilePhoto()">Hapus Foto</button>' : ''}</div>
+        <div class="profile-photo"><img id="profilePreview" src="${user.foto ? productImage(user.foto) : EMPTY_PROFILE_IMAGE}" alt="Foto profil"><label class="btn btn-sm btn-maroon">Ubah Foto<input id="profileFoto" type="file" accept="image/jpeg,image/png,image/webp" hidden onchange="saveProfilePhoto(event)"></label>${user.foto ? '<button type="button" class="btn btn-sm btn-outline-danger" onclick="removeProfilePhoto()">Hapus Foto</button>' : ''}</div>
         <div class="text-end mt-4"><button id="profileSaveButton" class="btn btn-maroon" type="submit" hidden>Simpan Perubahan</button></div>
       </form>
       <div class="text-end px-3 pb-3"><button class="btn btn-outline-maroon btn-sm" type="button" onclick="changePasswordDialog()">Ubah Password</button></div>

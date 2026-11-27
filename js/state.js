@@ -9,6 +9,7 @@ const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, char => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
 })[char]);
 const EMPTY_PRODUCT_IMAGE = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160"><rect width="100%" height="100%" fill="#f3f1ef"/></svg>');
+const EMPTY_PROFILE_IMAGE = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><rect width="128" height="128" fill="#e5e8eb"/><circle cx="64" cy="45" r="24" fill="#aeb6bf"/><path d="M17 128c2-30 20-47 47-47s45 17 47 47" fill="#aeb6bf"/></svg>');
 const productImage = image => image ? (image.startsWith('data:image/') || image.includes('/') ? image : `img/${image}`) : EMPTY_PRODUCT_IMAGE;
 const API_URL = 'api/index.php';
 const L = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusod tempor incididunt ut labore et dolore magna aliqua. Quis ipsu msuspendisse';
