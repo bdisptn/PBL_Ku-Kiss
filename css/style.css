@@ -281,18 +281,25 @@ footer {
 }
 
 .side {
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
   display: flex;
   flex: 0 0 230px;
   flex-direction: column;
+  height: 100vh;
   min-height: 100vh;
+  overflow-y: auto;
   background: #fff;
   box-shadow: 2px 0 6px rgba(0, 0, 0, 0.12);
 }
 
 .side-brand {
+  width: 100%;
   padding: 28px 20px;
   color: var(--maroon);
   font-weight: 500;
+  text-align: center;
 }
 
 .side a {
@@ -311,6 +318,9 @@ footer {
 }
 
 .side .out {
+  position: sticky;
+  bottom: 0;
+  flex: 0 0 auto;
   margin-top: auto;
   text-align: center;
 }
@@ -747,11 +757,16 @@ footer {
   }
 
   .side {
+    position: static;
+    top: auto;
+    align-self: auto;
     flex: 0 0 auto;
     flex-direction: row;
     flex-wrap: wrap;
+    height: auto;
     min-height: 0;
     width: 100%;
+    overflow: visible;
     padding: 8px;
     gap: 4px;
   }
@@ -771,7 +786,12 @@ footer {
   }
 
   .side .out {
+    position: fixed;
+    z-index: 1030;
+    bottom: 12px;
+    left: 12px;
     margin: 0;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.2);
   }
 
   .topbar {
@@ -1455,7 +1475,7 @@ footer {
 }
 
 .auth-brand h2 {
-  margin: 0;
+  padding: 8px;
   color: var(--maroon);
   font-size: clamp(1.65rem, 2.2vw, 2rem);
   font-weight: 600;
